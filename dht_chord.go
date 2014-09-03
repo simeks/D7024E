@@ -1,7 +1,11 @@
 // chord
 package dht
 
-import ()
+import (
+	"fmt"
+)
+
+var ring []Node
 
 type Node struct {
 	nodeId   string
@@ -19,11 +23,13 @@ func makeDHTNode(id *string, ip string, port string) Node {
 }
 
 func (n *Node) addToRing(node Node) {
-
+	ring = append(ring, node)
 }
 
 func (n *Node) printRing() {
-
+	for i := range ring {
+		fmt.Println(ring[i].nodeId + "\n") // print all nodes in the ring
+	}
 }
 
 func (n *Node) testCalcFingers(i int, j int) { // i = ?? j = number of bits
