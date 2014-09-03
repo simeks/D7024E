@@ -3,22 +3,18 @@ package dht
 
 import ()
 
-var newid string
-
-//var newid string
-
 type Node struct {
 	nodeId   string
 	nodeIp   string
 	nodePort string
 }
 
-func makeDHTNode(id string, ip string, port string) Node {
+func makeDHTNode(id *string, ip string, port string) Node {
 	if id == nil {
-		newid = generateNodeId()
+		newid := generateNodeId()
 		return Node{newid, ip, port}
 	} else {
-		return Node{id, ip, port}
+		return Node{*id, ip, port}
 	}
 }
 
@@ -30,7 +26,7 @@ func (n *Node) printRing() {
 
 }
 
-func (n *Node) testCalcFingers(i int, j int) {
+func (n *Node) testCalcFingers(i int, j int) { // i = ?? j = number of bits
 
 }
 
