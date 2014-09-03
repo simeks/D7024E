@@ -5,30 +5,36 @@ import (
 	"fmt"
 )
 
-var ring []Node
-
 type Node struct {
-	nodeId   string
-	nodeIp   string
-	nodePort string
+	nodeId    string
+	nodeIp    string
+	nodePort  string
+	successor *Node
 }
 
 func makeDHTNode(id *string, ip string, port string) Node {
 	if id == nil {
 		newid := generateNodeId()
-		return Node{newid, ip, port}
+		return Node{newid, ip, port, nil}
 	} else {
-		return Node{*id, ip, port}
+		return Node{*id, ip, port, nil}
 	}
 }
 
 func (n *Node) addToRing(node Node) {
-	ring = append(ring, node)
+	responsibleNode := n.lookup(node.nodeId)
+	node.successor = responsibleNode.successor
+	responsibleNode.successor = &node
 }
 
 func (n *Node) printRing() {
-	for i := range ring {
-		fmt.Println(ring[i].nodeId + "\n") // print all nodes in the ring
+	for i := n.successor; i != nil; i = i.successor {
+		if i == n {
+			fmt.Println(i.nodeId + "\n")
+			return
+		} else {
+			fmt.Println(i.nodeId + "\n")
+		}
 	}
 }
 
@@ -37,5 +43,5 @@ func (n *Node) testCalcFingers(i int, j int) { // i = ?? j = number of bits
 }
 
 func (n *Node) lookup(hashKey string) Node {
-	return Node{"test1", "test2", "test3"} // returnera rätt node här
+	return Node{"test1", "test2", "test3", nil} // returnera rätt node här
 }
