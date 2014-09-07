@@ -2,6 +2,7 @@ package dht
 
 import (
 	"fmt"
+	//"strconv"
 	"testing"
 )
 
@@ -135,14 +136,14 @@ func TestLookup(t *testing.T) {
  * distance     4
  */
 func TestFinger3bits(t *testing.T) {
-	id0 := "00"
-	id1 := "01"
-	id2 := "02"
-	id3 := "03"
-	id4 := "04"
-	id5 := "05"
-	id6 := "06"
-	id7 := "07"
+	id0 := "0"
+	id1 := "1"
+	id2 := "2"
+	id3 := "3"
+	id4 := "4"
+	id5 := "5"
+	id6 := "6"
+	id7 := "7"
 
 	node0 := makeDHTNode(&id0, "localhost", "1111")
 	node1 := makeDHTNode(&id1, "localhost", "1112")
@@ -161,17 +162,42 @@ func TestFinger3bits(t *testing.T) {
 	node3.addToRing(node6)
 	node3.addToRing(node7)
 
+	//node0 := makeDHTNode(&id0, "localhost", "1111")
+	//for i := 0; i < 160; i++ {
+	//	id := strconv.Itoa(i + 1)
+	//	port := 1112 + i
+	//	node := makeDHTNode(&id, "localhost", strconv.Itoa(port))
+	//	node0.addToRing(node)
+	//}
+
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")
-	node1.printRing()
+	//node0.printRing()
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
-	node3.testCalcFingers(1, 3)
+	//node3.testCalcFingers(1, 3)
+	//fmt.Println("")
+	//node3.testCalcFingers(2, 3)
+	//fmt.Println("")
+	//node3.testCalcFingers(3, 3)
+
+	node1.updateFingerTables()
+	fmt.Println("Node 1, first finger: " + node1.finger[0].nodeId)
+	fmt.Println("Node 1, second finger: " + node1.finger[1].nodeId)
+	fmt.Println("Node 1, third finger: " + node1.finger[2].nodeId)
 	fmt.Println("")
-	node3.testCalcFingers(2, 3)
+	node3.updateFingerTables()
+	fmt.Println("Node 3, first finger: " + node3.finger[0].nodeId)
+	fmt.Println("Node 3, second finger: " + node3.finger[1].nodeId)
+	fmt.Println("Node 3, third finger: " + node3.finger[2].nodeId)
 	fmt.Println("")
-	node3.testCalcFingers(3, 3)
+	node7.updateFingerTables()
+	fmt.Println("Node 7, first finger: " + node7.finger[0].nodeId)
+	fmt.Println("Node 7, second finger: " + node7.finger[1].nodeId)
+	fmt.Println("Node 7, third finger: " + node7.finger[2].nodeId)
+	fmt.Println("")
+
 }
 
 /*
