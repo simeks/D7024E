@@ -53,7 +53,7 @@ func calcFinger(n []byte, k int, m int) (string, []byte) {
 	nBigInt := big.Int{}
 	nBigInt.SetBytes(n)
 
-	//fmt.Printf("n            %s\n", string(n)) //nBigInt.String())
+	//fmt.Printf("n            %s\n", nBigInt.String())
 
 	//fmt.Printf("k            %d\n", k)
 
