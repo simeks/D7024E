@@ -11,20 +11,22 @@ type Node struct {
 	nodeId      string
 	nodeIp      string
 	nodePort    string
-	finger      []*Node
+	finger      [160]*Node
 	successor   *Node
 	predecessor *Node
 }
 
+var fingerTable [160]*Node
+
 func makeDHTNode(id *string, ip string, port string) *Node {
 	if id == nil {
 		newid := generateNodeId()
-		newNode := Node{newid, ip, port, nil, nil, nil}
+		newNode := Node{newid, ip, port, fingerTable, nil, nil}
 		newNode.successor = &newNode // add yourself as successor
 		newNode.predecessor = &newNode
 		return &newNode
 	} else {
-		newNode := Node{*id, ip, port, nil, nil, nil}
+		newNode := Node{*id, ip, port, fingerTable, nil, nil}
 		newNode.successor = &newNode
 		newNode.predecessor = &newNode
 		return &newNode
@@ -63,7 +65,7 @@ func (n *Node) updateFingerTables() {
 	bits := n.getNumberOfBits()
 	for k <= bits {
 		s, _ := calcFinger(nodeid, k, bits)
-		n.finger = append(n.finger, n.lookup(s))
+		n.finger[k-1] = n.lookup(s)
 		fmt.Println("Node " + n.nodeId + ", Finger " + strconv.Itoa(k) + ": " + n.finger[k-1].nodeId)
 		k++
 	}
