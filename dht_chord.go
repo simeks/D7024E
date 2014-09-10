@@ -7,39 +7,44 @@ import (
 	"strconv"
 )
 
+type Finger struct {
+	node  *Node
+	start string
+}
+
 type Node struct {
 	nodeId      string
 	nodeIp      string
 	nodePort    string
-	finger      [160]*Node
+	finger      [160]Finger
 	successor   *Node
 	predecessor *Node
 }
 
-var fingerTable [160]*Node
+var fingerTable [160]Finger
 
 func makeDHTNode(id *string, ip string, port string) *Node {
+	var newId string
+
 	if id == nil {
-		newid := generateNodeId()
-		newNode := Node{newid, ip, port, fingerTable, nil, nil}
-		newNode.successor = &newNode
-		newNode.predecessor = &newNode
-
-		// fill the finger table
-		for i := 0; i < 160; i++ {
-			newNode.finger[i] = &newNode
-		}
-		return &newNode
+		newId = generateNodeId()
 	} else {
-		newNode := Node{*id, ip, port, fingerTable, nil, nil}
-		newNode.successor = &newNode
-		newNode.predecessor = &newNode
-
-		for i := 0; i < 160; i++ {
-			newNode.finger[i] = &newNode
-		}
-		return &newNode
+		newId = *id
 	}
+
+	for i := 0; i < 160; i++ {
+		start, _ := calcFinger([]byte(newId), i+1, 160)
+		fingerTable[i].start = start
+	}
+	newNode := Node{newId, ip, port, fingerTable, nil, nil}
+	newNode.successor = &newNode
+	newNode.predecessor = &newNode
+
+	// fill the finger table
+	for i := 0; i < 160; i++ {
+		newNode.finger[i].node = &newNode
+	}
+	return &newNode
 }
 
 func (n *Node) addToRing(node *Node) {
@@ -113,9 +118,9 @@ func (n *Node) closestPrecedingFinger(id string) *Node {
 	id2 := []byte(id)
 
 	for i := 160; i > 0; i-- {
-		keyId := []byte(n.finger[i-1].nodeId)
+		keyId := []byte(n.finger[i-1].node.nodeId)
 		if between(id1, id2, keyId) {
-			return n.finger[i]
+			return n.finger[i].node
 		}
 	}
 	return n
@@ -160,15 +165,15 @@ func (n *Node) testCalcFingers(k int, m int) {
 func (n *Node) updateFingerTables() {
 	k := 1
 	nodeid := []byte(n.nodeId)
-	bits := n.getNumberOfBits()
+	//bits := n.getNumberOfBits()
 	for k <= 160 {
-		s, _ := calcFinger(nodeid, k, bits)
-		n.finger[k-1] = n.lookup(s)
+		s, _ := calcFinger(nodeid, k, 160)
+		n.finger[k-1].node = n.lookup(s)
 
 		// printa bara ut 4 första fingrarna
 		if k <= 4 {
 			fmt.Println("s: " + s)
-			fmt.Println("Node " + n.nodeId + ", Finger " + strconv.Itoa(k) + ": " + n.finger[k-1].nodeId)
+			fmt.Println("Node " + n.nodeId + ", Finger " + strconv.Itoa(k) + ": " + n.finger[k-1].node.nodeId)
 		}
 		k++
 	}

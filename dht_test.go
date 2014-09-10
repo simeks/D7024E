@@ -2,7 +2,7 @@ package dht
 
 import (
 	"fmt"
-	//"strconv"
+	"strconv"
 	"testing"
 )
 
@@ -232,7 +232,7 @@ func TestFinger3bits(t *testing.T) {
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")
-	node0.printRing()
+	//node0.printRing()
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
 	//node3.testCalcFingers(1, 3)
@@ -246,9 +246,13 @@ func TestFinger3bits(t *testing.T) {
 	//}
 	//fmt.Println("Node: " + node0.nodeId + " Successor: " + node0.successor.nodeId + " Predecessor: " + node0.predecessor.nodeId)
 
-	node0.updateFingerTables()
-	for i := node0.successor; i != node0; i = i.successor {
-		i.updateFingerTables()
+	//node0.updateFingerTables()
+	//for i := node0.successor; i != node0; i = i.successor {
+	//	i.updateFingerTables()
+	//}
+
+	for i := 0; i < 160; i++ {
+		fmt.Println("Node 0, finger[" + strconv.Itoa(i) + "].start: " + node0.finger[i].start)
 	}
 }
 
