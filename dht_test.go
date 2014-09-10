@@ -2,7 +2,7 @@ package dht
 
 import (
 	"fmt"
-	"strconv"
+	//"strconv"
 	"testing"
 )
 
@@ -136,49 +136,49 @@ func TestLookup(t *testing.T) {
  * distance     4
  */
 func TestFinger3bits(t *testing.T) {
-	//id0 := "0"
-	//id1 := "1"
-	//id2 := "2"
-	//id3 := "3"
-	//id4 := "4"
-	//id5 := "5"
-	//id6 := "6"
-	//id7 := "7"
-	//id8 := "8"
-	//id9 := "9"
-	//id10 := "10"
+	id0 := "00"
+	id1 := "01"
+	id2 := "02"
+	id3 := "03"
+	id4 := "04"
+	id5 := "05"
+	id6 := "06"
+	id7 := "07"
+	id8 := "08"
+	id9 := "09"
+	id10 := "10"
 
-	//node0 := makeDHTNode(&id0, "localhost", "1111")
-	//node1 := makeDHTNode(&id1, "localhost", "1112")
-	//node2 := makeDHTNode(&id2, "localhost", "1113")
-	//node3 := makeDHTNode(&id3, "localhost", "1114")
-	//node4 := makeDHTNode(&id4, "localhost", "1115")
-	//node5 := makeDHTNode(&id5, "localhost", "1116")
-	//node6 := makeDHTNode(&id6, "localhost", "1117")
-	//node7 := makeDHTNode(&id7, "localhost", "1118")
-	//node8 := makeDHTNode(&id8, "localhost", "1119")
-	//node9 := makeDHTNode(&id9, "localhost", "1120")
-	//node10 := makeDHTNode(&id10, "localhost", "1121")
-
-	//node0.addToRing(node1)
-	//node1.addToRing(node2)
-	//node1.addToRing(node3)
-	//node1.addToRing(node4)
-	//node4.addToRing(node5)
-	//node3.addToRing(node6)
-	//node3.addToRing(node7)
-	//node3.addToRing(node8)
-	//node3.addToRing(node9)
-	//node3.addToRing(node10)
-
-	id0 := "0"
 	node0 := makeDHTNode(&id0, "localhost", "1111")
-	for i := 0; i < 7; i++ { // create 7 nodes (= 3 bits)
-		id := strconv.Itoa(i + 1)
-		port := 1112 + i
-		node := makeDHTNode(&id, "localhost", strconv.Itoa(port))
-		node0.addToRing(node)
-	}
+	node1 := makeDHTNode(&id1, "localhost", "1112")
+	node2 := makeDHTNode(&id2, "localhost", "1113")
+	node3 := makeDHTNode(&id3, "localhost", "1114")
+	node4 := makeDHTNode(&id4, "localhost", "1115")
+	node5 := makeDHTNode(&id5, "localhost", "1116")
+	node6 := makeDHTNode(&id6, "localhost", "1117")
+	node7 := makeDHTNode(&id7, "localhost", "1118")
+	node8 := makeDHTNode(&id8, "localhost", "1119")
+	node9 := makeDHTNode(&id9, "localhost", "1120")
+	node10 := makeDHTNode(&id10, "localhost", "1121")
+
+	node0.addToRing(node1)
+	node1.addToRing(node2)
+	node1.addToRing(node3)
+	node1.addToRing(node4)
+	node4.addToRing(node5)
+	node3.addToRing(node6)
+	node3.addToRing(node7)
+	node3.addToRing(node8)
+	node3.addToRing(node9)
+	node3.addToRing(node10)
+
+	//id0 := "0"
+	//node0 := makeDHTNode(&id0, "localhost", "1111")
+	//for i := 0; i < 11; i++ { // create 7 nodes (= 3 bits)
+	//	id := strconv.Itoa(i + 1)
+	//	port := 1112 + i
+	//	node := makeDHTNode(&id, "localhost", strconv.Itoa(port))
+	//	node0.addToRing(node)
+	//}
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
@@ -192,11 +192,15 @@ func TestFinger3bits(t *testing.T) {
 	//fmt.Println("")
 	//node3.testCalcFingers(3, 3)
 
-	// update all finger tables
-	node0.updateFingerTables()
-	for i := node0.successor; i != node0; i = i.successor {
-		i.updateFingerTables()
+	fmt.Println("Node: " + node0.nodeId + " Successor: " + node0.successor.nodeId + " Predecessor: " + node0.predecessor.nodeId)
+	for i := node0.predecessor; i != node0; i = i.predecessor {
+		fmt.Println("Node: " + i.nodeId + " Successor: " + i.successor.nodeId + " Predecessor: " + i.predecessor.nodeId)
 	}
+
+	//node0.updateFingerTables()
+	//for i := node0.successor; i != node0; i = i.successor {
+	//	i.updateFingerTables()
+	//}
 }
 
 /*

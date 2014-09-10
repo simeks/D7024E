@@ -85,11 +85,12 @@ func calcFinger(n []byte, k int, m int) (string, []byte) {
 	//fmt.Printf("finger       %s\n", result.String())
 
 	resultBytes := result.Bytes()
-	//resultHex := fmt.Sprintf("%x", resultBytes)
+	resultHex := fmt.Sprintf("%x", resultBytes)
 
 	//fmt.Printf("finger (hex) %s\n", resultHex)
 
-	return result.String(), resultBytes
+	//return result.String(), resultBytes
+	return resultHex, resultBytes
 }
 
 func generateNodeId() string {
