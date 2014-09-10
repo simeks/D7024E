@@ -4,7 +4,7 @@ package dht
 import (
 	"fmt"
 	"math"
-	//"strconv"
+	"strconv"
 )
 
 type Node struct {
@@ -94,17 +94,18 @@ func (n *Node) findSuccessor(id string) *Node {
 }
 
 func (n *Node) findPredecessor(id string) *Node {
-	id1 := []byte(n.nodeId)
-	id2 := []byte(n.successor.nodeId)
-	keyId := []byte(id)
-	predecessor := n
+	//id1 := []byte(n.nodeId)
+	//id2 := []byte(n.successor.nodeId)
+	//keyId := []byte(id)
+	//predecessor := n
 
-	for i := n; between(id1, id2, keyId) == false; i = i.closestPrecedingFinger(id) {
-		id1 = []byte(i.closestPrecedingFinger(id).nodeId)
-		id2 = []byte(i.closestPrecedingFinger(id).successor.nodeId)
-		predecessor = i.closestPrecedingFinger(id)
-	}
-	return predecessor
+	//for i := n; between(id1, id2, keyId) == false; i = i.closestPrecedingFinger(id) {
+	//	id1 = []byte(i.closestPrecedingFinger(id).nodeId)
+	//	id2 = []byte(i.closestPrecedingFinger(id).successor.nodeId)
+	//	predecessor = i.closestPrecedingFinger(id)
+	//}
+	//return predecessor
+	return n.lookup(id)
 }
 
 func (n *Node) closestPrecedingFinger(id string) *Node {
@@ -139,6 +140,11 @@ func (n *Node) ringLength() int {
 	return length
 }
 
+// only for test
+func (n *Node) setSuccessor(node *Node) {
+	n.successor = node
+}
+
 func (n *Node) printRing() {
 	fmt.Println("Node: " + n.nodeId + " Successor: " + n.successor.nodeId + " Predecessor: " + n.predecessor.nodeId)
 	for i := n.successor; i != n; i = i.successor {
@@ -148,6 +154,25 @@ func (n *Node) printRing() {
 
 func (n *Node) testCalcFingers(k int, m int) {
 
+}
+
+// only for test
+func (n *Node) updateFingerTables() {
+	k := 1
+	nodeid := []byte(n.nodeId)
+	bits := n.getNumberOfBits()
+	for k <= 160 {
+		s, _ := calcFinger(nodeid, k, bits)
+		n.finger[k-1] = n.lookup(s)
+
+		// printa bara ut 4 första fingrarna
+		if k <= 4 {
+			fmt.Println("s: " + s)
+			fmt.Println("Node " + n.nodeId + ", Finger " + strconv.Itoa(k) + ": " + n.finger[k-1].nodeId)
+		}
+		k++
+	}
+	fmt.Println("")
 }
 
 func (n *Node) lookup(key string) *Node {
