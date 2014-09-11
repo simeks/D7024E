@@ -3,7 +3,6 @@ package dht
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 )
 
@@ -52,9 +51,10 @@ func (n *Node) addToRing(node *Node) {
 	node.successor = n.findSuccessor(node.nodeId)
 	node.predecessor = node.successor.predecessor
 	node.successor.predecessor = node
+	node.predecessor.successor = node
 
 	//init finger table
-	//n.initFingerTable(node)
+	n.initFingerTable(node)
 
 	//update others
 	//node.updateOthers()
@@ -64,17 +64,23 @@ func (n *Node) addToRing(node *Node) {
 
 }
 
-//func (n *Node) initFingerTable(node *Node) {
-//	 node.finger[0] = node.successor
+func (n *Node) initFingerTable(node *Node) {
+	node.finger[0].node = n.findSuccessor(node.finger[0].start)
 
-//	for i := 1; i < 160; i++ {
-//		if node.finger[i].start is in [n, node.finger[i-1]) {
-//			node.finger[i] = node.finger[i-1]
-//		} else {
-//			node.finger[i] = n.findSuccessor(finger[i].start)
-//		}
-//	}
-//}
+	id1 := []byte(node.nodeId)
+	var id2 []byte
+	var keyId []byte
+
+	for i := 1; i < 160; i++ {
+		id2 = []byte(node.finger[i-1].node.nodeId)
+		keyId = []byte(node.finger[i].start)
+		if between(id1, id2, keyId) {
+			node.finger[i].node = node.finger[i-1].node
+		} else {
+			node.finger[i].node = n.findSuccessor(node.finger[i].start)
+		}
+	}
+}
 
 //func (n *Node) updateOthers() {
 //	for i := 0; i < 160; i++ {
@@ -126,30 +132,6 @@ func (n *Node) closestPrecedingFinger(id string) *Node {
 	return n
 }
 
-func (n *Node) getNumberOfBits() int {
-	i := 0
-	m := 0
-	length := n.ringLength()
-	for length > int(math.Pow(float64(2), float64(i))) {
-		i++
-		m++
-	}
-	return m
-}
-
-func (n *Node) ringLength() int {
-	length := 1
-	for i := n.successor; i != n; i = i.successor {
-		length++
-	}
-	return length
-}
-
-// only for test
-func (n *Node) setSuccessor(node *Node) {
-	n.successor = node
-}
-
 func (n *Node) printRing() {
 	fmt.Println("Node: " + n.nodeId + " Successor: " + n.successor.nodeId + " Predecessor: " + n.predecessor.nodeId)
 	for i := n.successor; i != n; i = i.successor {
@@ -165,7 +147,6 @@ func (n *Node) testCalcFingers(k int, m int) {
 func (n *Node) updateFingerTables() {
 	k := 1
 	nodeid := []byte(n.nodeId)
-	//bits := n.getNumberOfBits()
 	for k <= 160 {
 		s, _ := calcFinger(nodeid, k, 160)
 		n.finger[k-1].node = n.lookup(s)

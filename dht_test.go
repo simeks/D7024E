@@ -2,7 +2,7 @@ package dht
 
 import (
 	"fmt"
-	"strconv"
+	//"strconv"
 	"testing"
 )
 
@@ -136,16 +136,16 @@ func TestLookup(t *testing.T) {
  * distance     4
  */
 func TestFinger3bits(t *testing.T) {
-	id0 := "0"
-	id1 := "1"
-	id2 := "2"
-	id3 := "3"
-	id4 := "4"
-	id5 := "5"
-	id6 := "6"
-	id7 := "7"
-	id8 := "8"
-	id9 := "9"
+	id0 := "00"
+	id1 := "01"
+	id2 := "02"
+	id3 := "03"
+	id4 := "04"
+	id5 := "05"
+	id6 := "06"
+	id7 := "07"
+	id8 := "08"
+	id9 := "09"
 	id10 := "10"
 	id11 := "11"
 	id12 := "12"
@@ -212,27 +212,10 @@ func TestFinger3bits(t *testing.T) {
 	//	node0.addToRing(node)
 	//}
 
-	node0.setSuccessor(node1)
-	node1.setSuccessor(node2)
-	node2.setSuccessor(node3)
-	node3.setSuccessor(node4)
-	node4.setSuccessor(node5)
-	node5.setSuccessor(node6)
-	node6.setSuccessor(node7)
-	node7.setSuccessor(node8)
-	node8.setSuccessor(node9)
-	node9.setSuccessor(node10)
-	node10.setSuccessor(node11)
-	node11.setSuccessor(node12)
-	node12.setSuccessor(node13)
-	node13.setSuccessor(node14)
-	node14.setSuccessor(node15)
-	node15.setSuccessor(node0)
-
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")
-	//node0.printRing()
+	node0.printRing()
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
 	//node3.testCalcFingers(1, 3)
@@ -246,14 +229,21 @@ func TestFinger3bits(t *testing.T) {
 	//}
 	//fmt.Println("Node: " + node0.nodeId + " Successor: " + node0.successor.nodeId + " Predecessor: " + node0.predecessor.nodeId)
 
-	//node0.updateFingerTables()
-	//for i := node0.successor; i != node0; i = i.successor {
-	//	i.updateFingerTables()
-	//}
+	fmt.Println("Node 00, finger 1: " + node0.finger[0].node.nodeId)
+	fmt.Println("Node 00, finger 2: " + node0.finger[1].node.nodeId)
+	fmt.Println("Node 00, finger 3: " + node0.finger[2].node.nodeId)
+	fmt.Println("Node 00, finger 4: " + node0.finger[3].node.nodeId)
 
-	for i := 0; i < 160; i++ {
-		fmt.Println("Node 0, finger[" + strconv.Itoa(i) + "].start: " + node0.finger[i].start)
-	}
+	fmt.Println("")
+
+	fmt.Println("Node 01, finger 1: " + node0.finger[0].node.nodeId)
+	fmt.Println("Node 01, finger 2: " + node0.finger[1].node.nodeId)
+	fmt.Println("Node 01, finger 3: " + node0.finger[2].node.nodeId)
+	fmt.Println("Node 01, finger 4: " + node0.finger[3].node.nodeId)
+
+	//for i := 0; i < 160; i++ {
+	//	fmt.Println("Node 0, finger[" + strconv.Itoa(i) + "].start: " + node0.finger[i].start)
+	//}
 }
 
 /*
