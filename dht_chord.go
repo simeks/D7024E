@@ -6,6 +6,7 @@ import (
 	//"math"
 	"math/big"
 	//"strconv"
+	"encoding/hex"
 )
 
 type Finger struct {
@@ -151,15 +152,16 @@ func (n *Node) closestPrecedingFinger(id []byte) *Node {
 
 func (n *Node) printRing() {
 	//fmt.Println("Node: " + string(n.nodeId) + " Successor: " + string(n.successor.nodeId) + " Predecessor: " + string(n.predecessor.nodeId))
-	fmt.Println("Node "+":", n.nodeId)
-	fmt.Println("Successor "+":", n.successor.nodeId)
-	fmt.Println("Predecessors"+":", n.predecessor.nodeId)
+	fmt.Println("Node "+":", hex.EncodeToString(n.nodeId))
+	fmt.Println("Successor "+":", hex.EncodeToString(n.successor.nodeId))
+	fmt.Println("Predecessors"+":", hex.EncodeToString(n.predecessor.nodeId))
 	fmt.Println("")
+
 	for i := n.successor; i != n; i = i.successor {
 		//fmt.Println("Node: " + string(i.nodeId) + " Successor: " + string(i.successor.nodeId) + " Predecessor: " + string(i.predecessor.nodeId))
-		fmt.Println("Node "+":", i.nodeId)
-		fmt.Println("Successors"+":", i.successor.nodeId)
-		fmt.Println("Predecessor "+":", i.predecessor.nodeId)
+		fmt.Println("Node "+":", hex.EncodeToString(i.nodeId))
+		fmt.Println("Successor "+":", hex.EncodeToString(i.successor.nodeId))
+		fmt.Println("Predecessors"+":", hex.EncodeToString(i.predecessor.nodeId))
 		fmt.Println("")
 	}
 }

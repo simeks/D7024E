@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"encoding/hex"
 )
 
 // test cases can be run by calling e.g. go test -test.run TestRingSetup
@@ -263,13 +264,13 @@ func TestFinger3bits(t *testing.T) {
 	// prints out finger[i].start
 	fmt.Println("Node ", node0.nodeId)
 	for i := 0; i < 3; i++ {
-		fmt.Println("finger["+strconv.Itoa(i)+"].start: ", node0.finger[i].start)
+		fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(node0.finger[i].start))
 	}
 	fmt.Println("")
 	for j := node0.successor; j != node0; j = j.successor {
 		fmt.Println("Node ", j.nodeId)
 		for i := 0; i < 3; i++ {
-			fmt.Println("finger["+strconv.Itoa(i)+"].start: ", j.finger[i].start)
+			fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(j.finger[i].start))
 		}
 		fmt.Println("")
 	}
