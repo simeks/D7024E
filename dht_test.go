@@ -1,10 +1,10 @@
 package dht
 
 import (
-	"fmt"
-	"strconv"
-	"testing"
 	"encoding/hex"
+	"fmt"
+	//"strconv"
+	"testing"
 )
 
 // test cases can be run by calling e.g. go test -test.run TestRingSetup
@@ -230,16 +230,17 @@ func TestFinger3bits(t *testing.T) {
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
 	// prints out finger[i].node.nodeId
-	fmt.Println("Node ", node0.nodeId)
-	fmt.Println("Finger[0].node.nodeId: ", node0.finger[0].node.nodeId)
-	fmt.Println("Finger[1].node.nodeId: ", node0.finger[1].node.nodeId)
-	fmt.Println("Finger[2].node.nodeId: ", node0.finger[2].node.nodeId)
+	fmt.Println("Node ", hex.EncodeToString(node0.nodeId))
+	fmt.Println("Finger[0].node.nodeId: ", hex.EncodeToString(node0.finger[0].node.nodeId))
+	fmt.Println("Finger[1].node.nodeId: ", hex.EncodeToString(node0.finger[1].node.nodeId))
+	fmt.Println("Finger[2].node.nodeId: ", hex.EncodeToString(node0.finger[2].node.nodeId))
 	fmt.Println("")
+
 	for i := node0.successor; i != node0; i = i.successor {
-		fmt.Println("Node ", i.nodeId)
-		fmt.Println("Finger[0].node.nodeId: ", i.finger[0].node.nodeId)
-		fmt.Println("Finger[1].node.nodeId: ", i.finger[1].node.nodeId)
-		fmt.Println("Finger[2].node.nodeId: ", i.finger[2].node.nodeId)
+		fmt.Println("Node ", hex.EncodeToString(i.nodeId))
+		fmt.Println("Finger[0].node.nodeId: ", hex.EncodeToString(i.finger[0].node.nodeId))
+		fmt.Println("Finger[1].node.nodeId: ", hex.EncodeToString(i.finger[1].node.nodeId))
+		fmt.Println("Finger[2].node.nodeId: ", hex.EncodeToString(i.finger[2].node.nodeId))
 		fmt.Println("")
 	}
 
@@ -262,18 +263,18 @@ func TestFinger3bits(t *testing.T) {
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
 	// prints out finger[i].start
-	fmt.Println("Node ", node0.nodeId)
-	for i := 0; i < 3; i++ {
-		fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(node0.finger[i].start))
-	}
-	fmt.Println("")
-	for j := node0.successor; j != node0; j = j.successor {
-		fmt.Println("Node ", j.nodeId)
-		for i := 0; i < 3; i++ {
-			fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(j.finger[i].start))
-		}
-		fmt.Println("")
-	}
+	//fmt.Println("Node ", hex.EncodeToString(node0.nodeId))
+	//for i := 0; i < 3; i++ {
+	//	fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(node0.finger[i].start))
+	//}
+	//fmt.Println("")
+	//for j := node0.successor; j != node0; j = j.successor {
+	//	fmt.Println("Node ", hex.EncodeToString(j.nodeId))
+	//	for i := 0; i < 3; i++ {
+	//		fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(j.finger[i].start))
+	//	}
+	//	fmt.Println("")
+	//}
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
@@ -281,6 +282,7 @@ func TestFinger3bits(t *testing.T) {
 	//for j := node0.successor; j != node0; j = j.successor {
 	//	j.updateFingerTables()
 	//}
+
 }
 
 /*

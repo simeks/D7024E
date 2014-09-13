@@ -4,9 +4,9 @@ package dht
 import (
 	"fmt"
 	//"math"
+	"encoding/hex"
 	"math/big"
 	//"strconv"
-	"encoding/hex"
 )
 
 type Finger struct {
@@ -61,10 +61,10 @@ func (n *Node) addToRing(node *Node) {
 	node.predecessor.successor = node
 
 	//init finger table
-	//n.initFingerTable(node)
+	n.initFingerTable(node)
 
 	//update others
-	//node.updateOthers()
+	node.updateOthers()
 
 	//move keys in (predecessor, n] from successor
 	//...
@@ -73,6 +73,11 @@ func (n *Node) addToRing(node *Node) {
 
 func (n *Node) initFingerTable(node *Node) {
 	node.finger[0].node = n.findSuccessor(node.finger[0].start)
+	fmt.Println("-------------------- Node: ", node.nodeId)
+
+	//fmt.Println("node.start: ", node.finger[0].start)
+	//fmt.Println("finger[0]: ", node.finger[0].node.nodeId)
+	//fmt.Println("")
 
 	id1 := node.nodeId
 	var id2 []byte
@@ -86,6 +91,9 @@ func (n *Node) initFingerTable(node *Node) {
 		} else {
 			node.finger[i].node = n.findSuccessor(node.finger[i].start)
 		}
+		//fmt.Println("node.start: ", node.finger[i].start)
+		//fmt.Println("finger[i]: ", node.finger[i].node.nodeId)
+		//fmt.Println("")
 	}
 }
 
@@ -96,30 +104,61 @@ func (n *Node) updateOthers() {
 		two := big.NewInt(2)
 		sum := new(big.Int)
 		sum.Exp(two, big.NewInt(int64(i)), nil)
-		x.SetString(string(n.nodeId), 16)
+		x.SetString(fmt.Sprintf("%x", n.nodeId), 16)
 		x.Sub(x, sum)
-		result := x.Bytes()
 
+		result := x.Bytes()
 		p := n.findPredecessor(result)
+
+		fmt.Println("n - 2^i: ", x)
+		fmt.Println("byte array result: ", result)
+		fmt.Println("update this node: ", p.nodeId)
+
 		p.updateFingerTable(n, i)
 	}
 }
 
 func (n *Node) updateFingerTable(node *Node, i int) {
-	id1 := n.nodeId
-	id2 := n.finger[i].node.nodeId
-	keyId := node.nodeId
+	//id1 := n.nodeId
+	//id2 := n.finger[i].node.nodeId
+	//keyId := node.nodeId
 
-	if between(id1, id2, keyId) {
-		n.finger[i].node = node
-		p := n.predecessor
-		p.updateFingerTable(node, i)
-	}
+	//if between(id1, id2, keyId) {
+	//	fmt.Println("")
+	//	fmt.Println("")
+	//	fmt.Print("Node ", node.nodeId) // node 5 verkar aldrig uppdatera node 1
+	//	fmt.Print(" updated node ", n.nodeId)
+	//	fmt.Println("")
+	//	fmt.Println("")
+	//	fmt.Println("")
+	//	n.finger[i].node = node
+
+	//	// behövs dessa???
+	//	//p := n.predecessor
+	//	//p.updateFingerTable(node, i)
+	//}
+
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Print("Node ", node.nodeId) // node 5 verkar aldrig uppdatera node 1
+	fmt.Print(" updated node ", n.nodeId)
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("")
+	n.finger[i].node = node
 }
 
 func (n *Node) findSuccessor(id []byte) *Node {
-	predecessor := n.findPredecessor(id)
-	return predecessor.successor
+	//predecessor := n.findPredecessor(id)
+	//return predecessor.successor
+	id1 := n.nodeId
+	id2 := n.successor.nodeId
+
+	if between2(id1, id2, id) {
+		return n.successor
+	} else {
+		return n.successor.findSuccessor(id)
+	}
 }
 
 func (n *Node) findPredecessor(id []byte) *Node {
@@ -130,8 +169,8 @@ func (n *Node) findPredecessor(id []byte) *Node {
 	//for i := n; between(id1, id2, id) == false; i = i.closestPrecedingFinger(id) {
 	//	id1 = i.closestPrecedingFinger(id).nodeId
 	//	id2 = i.closestPrecedingFinger(id).successor.nodeId
-	//	fmt.Println("id1: " + string(id1) + " id2: " + string(id2))
 	//	predecessor = i.closestPrecedingFinger(id)
+	//	fmt.Println(predecessor.nodeId)
 	//}
 	//return predecessor
 	return n.lookup(id)
@@ -151,14 +190,12 @@ func (n *Node) closestPrecedingFinger(id []byte) *Node {
 }
 
 func (n *Node) printRing() {
-	//fmt.Println("Node: " + string(n.nodeId) + " Successor: " + string(n.successor.nodeId) + " Predecessor: " + string(n.predecessor.nodeId))
 	fmt.Println("Node "+":", hex.EncodeToString(n.nodeId))
 	fmt.Println("Successor "+":", hex.EncodeToString(n.successor.nodeId))
 	fmt.Println("Predecessors"+":", hex.EncodeToString(n.predecessor.nodeId))
 	fmt.Println("")
 
 	for i := n.successor; i != n; i = i.successor {
-		//fmt.Println("Node: " + string(i.nodeId) + " Successor: " + string(i.successor.nodeId) + " Predecessor: " + string(i.predecessor.nodeId))
 		fmt.Println("Node "+":", hex.EncodeToString(i.nodeId))
 		fmt.Println("Successor "+":", hex.EncodeToString(i.successor.nodeId))
 		fmt.Println("Predecessors"+":", hex.EncodeToString(i.predecessor.nodeId))

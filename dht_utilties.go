@@ -45,6 +45,28 @@ func between(id1, id2, key []byte) bool {
 	}
 }
 
+func between2(id1, id2, key []byte) bool {
+	// 0 if a==b, -1 if a < b, and +1 if a > b
+
+	if bytes.Compare(key, id2) == 0 { // key == id2
+		return true
+	}
+
+	if bytes.Compare(id2, id1) == 1 { // id2 > id1
+		if bytes.Compare(key, id2) == -1 && bytes.Compare(key, id1) == 1 { // key < id2 && key > id1
+			return true
+		} else {
+			return false
+		}
+	} else { // id1 > id2
+		if bytes.Compare(key, id1) == 1 || bytes.Compare(key, id2) == -1 { // key > id1 || key < id2
+			return true
+		} else {
+			return false
+		}
+	}
+}
+
 // (n + 2^(k-1)) mod (2^m)
 func calcFinger(n []byte, k int, m int) (string, []byte) {
 	//fmt.Println("calulcating result = (n+2^(k-1)) mod (2^m)")
