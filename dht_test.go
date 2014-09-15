@@ -1,10 +1,9 @@
 package dht
 
 import (
-	"encoding/hex"
 	"fmt"
-	//"strconv"
 	"testing"
+	"encoding/hex"
 )
 
 // test cases can be run by calling e.g. go test -test.run TestRingSetup
@@ -24,16 +23,30 @@ import (
  * ee33f5aaf7cf6a7168a0f3a4449c19c9b4d1e399 1359898542148650805696846077009990511357036979097
  */
 func TestRingSetup(t *testing.T) {
+	id0 := "00"
+	id1 := "01"
+	id2 := "02"
+	id3 := "03"
+	id4 := "04"
+	id5 := "05"
+	id6 := "06"
+	id7 := "07"
+	id8 := "08"
+
 	// note nil arg means automatically generate ID, e.g. f38f3b2dcc69a2093f258e31902e40ad33148385
-	node1 := makeDHTNode(nil, "localhost", "1111")
-	node2 := makeDHTNode(nil, "localhost", "1112")
-	node3 := makeDHTNode(nil, "localhost", "1113")
-	node4 := makeDHTNode(nil, "localhost", "1114")
-	node5 := makeDHTNode(nil, "localhost", "1115")
-	node6 := makeDHTNode(nil, "localhost", "1116")
-	node7 := makeDHTNode(nil, "localhost", "1117")
-	node8 := makeDHTNode(nil, "localhost", "1118")
-	node9 := makeDHTNode(nil, "localhost", "1119")
+	node1 := makeDHTNode(&id0, "localhost", "1111")
+	node2 := makeDHTNode(&id1, "localhost", "1112")
+	node3 := makeDHTNode(&id2, "localhost", "1113")
+	node4 := makeDHTNode(&id3, "localhost", "1114")
+	node5 := makeDHTNode(&id4, "localhost", "1115")
+	node6 := makeDHTNode(&id5, "localhost", "1116")
+	node7 := makeDHTNode(&id6, "localhost", "1117")
+	node8 := makeDHTNode(&id7, "localhost", "1118")
+	node9 := makeDHTNode(&id8, "localhost", "1119")
+
+	fmt.Println("Node: ", hex.EncodeToString(node1.nodeId))
+	fmt.Println("Successor: ", hex.EncodeToString(node1.successor.nodeId))
+	fmt.Println("Predecessor: ", hex.EncodeToString(node1.predecessor.nodeId))
 
 	node1.addToRing(node2)
 	node1.addToRing(node3)
@@ -90,8 +103,8 @@ func TestLookup(t *testing.T) {
 	fmt.Println("str=" + str)
 	fmt.Println("hashKey=" + hashKey)
 
-	//fmt.Println("node 1: " + node1.lookup(hashKey).nodeId + " is respoinsible for " + hashKey)
-	//fmt.Println("node 5: " + node5.lookup(hashKey).nodeId + " is respoinsible for " + hashKey)
+	fmt.Println("node 1: " + hex.EncodeToString(node1.lookup(hashKey).nodeId) + " is respoinsible for " + hashKey)
+	fmt.Println("node 5: " + hex.EncodeToString(node5.lookup(hashKey).nodeId) + " is respoinsible for " + hashKey)
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
@@ -139,150 +152,41 @@ func TestLookup(t *testing.T) {
 func TestFinger3bits(t *testing.T) {
 	id0 := "00"
 	id1 := "01"
-	//id2 := "02"
-	//id3 := "03"
-	//id4 := "04"
-	//id5 := "05"
-	//id6 := "06"
-	//id7 := "07"
-	//id8 := "08"
-	//id9 := "09"
-	//id10 := "10"
-	//id11 := "11"
-	//id12 := "12"
-	//id13 := "13"
-	//id14 := "14"
-	//id15 := "15"
+	id2 := "02"
+	id3 := "03"
+	id4 := "04"
+	id5 := "05"
+	id6 := "06"
+	id7 := "07"
 
 	node0 := makeDHTNode(&id0, "localhost", "1111")
 	node1 := makeDHTNode(&id1, "localhost", "1112")
-	//node2 := makeDHTNode(&id2, "localhost", "1113")
-	//node3 := makeDHTNode(&id3, "localhost", "1114")
-	//node4 := makeDHTNode(&id4, "localhost", "1115")
-	//node5 := makeDHTNode(&id5, "localhost", "1116")
-	//node6 := makeDHTNode(&id6, "localhost", "1117")
-	//node7 := makeDHTNode(&id7, "localhost", "1118")
-	//node8 := makeDHTNode(&id8, "localhost", "1119")
-	//node9 := makeDHTNode(&id9, "localhost", "1120")
-	//node10 := makeDHTNode(&id10, "localhost", "1121")
-	//node11 := makeDHTNode(&id11, "localhost", "1122")
-	//node12 := makeDHTNode(&id12, "localhost", "1123")
-	//node13 := makeDHTNode(&id13, "localhost", "1124")
-	//node14 := makeDHTNode(&id14, "localhost", "1125")
-	//node15 := makeDHTNode(&id15, "localhost", "1126")
-
-	//node0 := makeDHTNode(nil, "localhost", "1111")
-	//node1 := makeDHTNode(nil, "localhost", "1112")
-	//node2 := makeDHTNode(nil, "localhost", "1113")
-	//node3 := makeDHTNode(nil, "localhost", "1114")
-	//node4 := makeDHTNode(nil, "localhost", "1115")
-	//node5 := makeDHTNode(nil, "localhost", "1116")
-	//node6 := makeDHTNode(nil, "localhost", "1117")
-	//node7 := makeDHTNode(nil, "localhost", "1118")
-	//node8 := makeDHTNode(nil, "localhost", "1119")
-	//node9 := makeDHTNode(nil, "localhost", "1120")
-	//node10 := makeDHTNode(nil, "localhost", "1121")
-	//node11 := makeDHTNode(nil, "localhost", "1122")
-	//node12 := makeDHTNode(nil, "localhost", "1123")
-	//node13 := makeDHTNode(nil, "localhost", "1124")
-	//node14 := makeDHTNode(nil, "localhost", "1125")
-	//node15 := makeDHTNode(nil, "localhost", "1126")
+	node2 := makeDHTNode(&id2, "localhost", "1113")
+	node3 := makeDHTNode(&id3, "localhost", "1114")
+	node4 := makeDHTNode(&id4, "localhost", "1115")
+	node5 := makeDHTNode(&id5, "localhost", "1116")
+	node6 := makeDHTNode(&id6, "localhost", "1117")
+	node7 := makeDHTNode(&id7, "localhost", "1118")
 
 	node0.addToRing(node1)
-	//node1.addToRing(node2)
-	//node1.addToRing(node3)
-	//node1.addToRing(node4)
-	//node4.addToRing(node5)
-	//node3.addToRing(node6)
-	//node3.addToRing(node7)
-	//node3.addToRing(node8)
-	//node3.addToRing(node9)
-	//node3.addToRing(node10)
-	//node3.addToRing(node11)
-	//node3.addToRing(node12)
-	//node3.addToRing(node13)
-	//node3.addToRing(node14)
-	//node3.addToRing(node15)
-
-	//id0 := "0"
-	//node0 := makeDHTNode(&id0, "localhost", "1111")
-	//for i := 0; i < 11; i++ { // create 7 nodes (= 3 bits)
-	//	id := strconv.Itoa(i + 1)
-	//	port := 1112 + i
-	//	node := makeDHTNode(&id, "localhost", strconv.Itoa(port))
-	//	node0.addToRing(node)
-	//}
+	node1.addToRing(node2)
+	node1.addToRing(node3)
+	node1.addToRing(node4)
+	node4.addToRing(node5)
+	node3.addToRing(node6)
+	node3.addToRing(node7)
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")
-	node0.printRing()
+	node1.printRing()
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
-	//node3.testCalcFingers(1, 3)
-	//fmt.Println("")
-	//node3.testCalcFingers(2, 3)
-	//fmt.Println("")
-	//node3.testCalcFingers(3, 3)
-
-	fmt.Println("------------------------------------------------------------------------------------------------")
-	fmt.Println("FINGERS")
-	fmt.Println("------------------------------------------------------------------------------------------------")
-
-	// prints out finger[i].node.nodeId
-	fmt.Println("Node ", hex.EncodeToString(node0.nodeId))
-	fmt.Println("Finger[0].node.nodeId: ", hex.EncodeToString(node0.finger[0].node.nodeId))
-	fmt.Println("Finger[1].node.nodeId: ", hex.EncodeToString(node0.finger[1].node.nodeId))
-	fmt.Println("Finger[2].node.nodeId: ", hex.EncodeToString(node0.finger[2].node.nodeId))
+	node3.testCalcFingers(1, 3)
 	fmt.Println("")
-
-	for i := node0.successor; i != node0; i = i.successor {
-		fmt.Println("Node ", hex.EncodeToString(i.nodeId))
-		fmt.Println("Finger[0].node.nodeId: ", hex.EncodeToString(i.finger[0].node.nodeId))
-		fmt.Println("Finger[1].node.nodeId: ", hex.EncodeToString(i.finger[1].node.nodeId))
-		fmt.Println("Finger[2].node.nodeId: ", hex.EncodeToString(i.finger[2].node.nodeId))
-		fmt.Println("")
-	}
-
-	fmt.Println("------------------------------------------------------------------------------------------------")
-
-	//fmt.Println("Node 00, finger 1: " + node0.finger[0].node.nodeId)
-	//fmt.Println("Node 00, finger 2: " + node0.finger[1].node.nodeId)
-	//fmt.Println("Node 00, finger 3: " + node0.finger[2].node.nodeId)
-	//fmt.Println("Node 00, finger 4: " + node0.finger[3].node.nodeId)
-
-	//fmt.Println("")
-
-	//fmt.Println("Node 01, finger 1: " + node0.finger[0].node.nodeId)
-	//fmt.Println("Node 01, finger 2: " + node0.finger[1].node.nodeId)
-	//fmt.Println("Node 01, finger 3: " + node0.finger[2].node.nodeId)
-	//fmt.Println("Node 01, finger 4: " + node0.finger[3].node.nodeId)
-
-	fmt.Println("------------------------------------------------------------------------------------------------")
-	fmt.Println("FINGER.start")
-	fmt.Println("------------------------------------------------------------------------------------------------")
-
-	// prints out finger[i].start
-	//fmt.Println("Node ", hex.EncodeToString(node0.nodeId))
-	//for i := 0; i < 3; i++ {
-	//	fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(node0.finger[i].start))
-	//}
-	//fmt.Println("")
-	//for j := node0.successor; j != node0; j = j.successor {
-	//	fmt.Println("Node ", hex.EncodeToString(j.nodeId))
-	//	for i := 0; i < 3; i++ {
-	//		fmt.Println("finger["+strconv.Itoa(i)+"].start: ", hex.EncodeToString(j.finger[i].start))
-	//	}
-	//	fmt.Println("")
-	//}
-
-	fmt.Println("------------------------------------------------------------------------------------------------")
-
-	//node0.updateFingerTables()
-	//for j := node0.successor; j != node0; j = j.successor {
-	//	j.updateFingerTables()
-	//}
-
+	node3.testCalcFingers(2, 3)
+	fmt.Println("")
+	node3.testCalcFingers(3, 3)
 }
 
 /*
