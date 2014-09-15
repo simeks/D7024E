@@ -86,7 +86,7 @@ func (n *Node) initFingerTable(node *Node) {
 	for i := 1; i < 3; i++ {
 		id2 = node.finger[i-1].node.nodeId
 		keyId = node.finger[i].start
-		if between(id1, id2, keyId) {
+		if between(id1, id2, keyId) { // [node.nodeId, finger[i-1].node.nodeId)
 			node.finger[i].node = node.finger[i-1].node
 		} else {
 			node.finger[i].node = n.findSuccessor(node.finger[i].start)
@@ -108,7 +108,8 @@ func (n *Node) updateOthers() {
 		x.Sub(x, sum)
 
 		result := x.Bytes()
-		p := n.findPredecessor(result)
+		//p := n.findPredecessor(result)
+		p := n.findPredecessor(result).successor
 
 		fmt.Println("n - 2^i: ", x)
 		fmt.Println("byte array result: ", result)
@@ -123,7 +124,7 @@ func (n *Node) updateFingerTable(node *Node, i int) {
 	//id2 := n.finger[i].node.nodeId
 	//keyId := node.nodeId
 
-	//if between(id1, id2, keyId) {
+	//if between(id1, id2, keyId) { // [n.nodeId, n.finger[i].node)
 	//	fmt.Println("")
 	//	fmt.Println("")
 	//	fmt.Print("Node ", node.nodeId) // node 5 verkar aldrig uppdatera node 1
@@ -149,16 +150,17 @@ func (n *Node) updateFingerTable(node *Node, i int) {
 }
 
 func (n *Node) findSuccessor(id []byte) *Node {
-	//predecessor := n.findPredecessor(id)
-	//return predecessor.successor
-	id1 := n.nodeId
-	id2 := n.successor.nodeId
+	predecessor := n.findPredecessor(id)
+	return predecessor.successor
 
-	if between2(id1, id2, id) {
-		return n.successor
-	} else {
-		return n.successor.findSuccessor(id)
-	}
+	//id1 := n.nodeId
+	//id2 := n.successor.nodeId
+
+	//if between2(id1, id2, id) {
+	//	return n.successor
+	//} else {
+	//	return n.successor.findSuccessor(id)
+	//}
 }
 
 func (n *Node) findPredecessor(id []byte) *Node {
