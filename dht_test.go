@@ -139,37 +139,37 @@ func TestLookup(t *testing.T) {
 func TestFinger3bits(t *testing.T) {
 	id0 := "00"
 	id1 := "01"
-	id2 := "02"
-	id3 := "03"
-	id4 := "04"
-	id5 := "05"
-	id6 := "06"
-	id7 := "07" /*
-		id8 := "08"
-		id9 := "09"
-		id10 := "10"
-		id11 := "11"
-		id12 := "12"
-		id13 := "13"
-		id14 := "14"
-		id15 := "15"*/
+	//id2 := "02"
+	//id3 := "03"
+	//id4 := "04"
+	//id5 := "05"
+	//id6 := "06"
+	//id7 := "07"
+	//id8 := "08"
+	//id9 := "09"
+	//id10 := "10"
+	//id11 := "11"
+	//id12 := "12"
+	//id13 := "13"
+	//id14 := "14"
+	//id15 := "15"
 
 	node0 := makeDHTNode(&id0, "localhost", "1111")
 	node1 := makeDHTNode(&id1, "localhost", "1112")
-	node2 := makeDHTNode(&id2, "localhost", "1113")
-	node3 := makeDHTNode(&id3, "localhost", "1114")
-	node4 := makeDHTNode(&id4, "localhost", "1115")
-	node5 := makeDHTNode(&id5, "localhost", "1116")
-	node6 := makeDHTNode(&id6, "localhost", "1117")
-	node7 := makeDHTNode(&id7, "localhost", "1118") /*
-		node8 := makeDHTNode(&id8, "localhost", "1119")
-		node9 := makeDHTNode(&id9, "localhost", "1120")
-		node10 := makeDHTNode(&id10, "localhost", "1121")
-		node11 := makeDHTNode(&id11, "localhost", "1122")
-		node12 := makeDHTNode(&id12, "localhost", "1123")
-		node13 := makeDHTNode(&id13, "localhost", "1124")
-		node14 := makeDHTNode(&id14, "localhost", "1125")
-		node15 := makeDHTNode(&id15, "localhost", "1126")*/
+	//node2 := makeDHTNode(&id2, "localhost", "1113")
+	//node3 := makeDHTNode(&id3, "localhost", "1114")
+	//node4 := makeDHTNode(&id4, "localhost", "1115")
+	//node5 := makeDHTNode(&id5, "localhost", "1116")
+	//node6 := makeDHTNode(&id6, "localhost", "1117")
+	//node7 := makeDHTNode(&id7, "localhost", "1118")
+	//node8 := makeDHTNode(&id8, "localhost", "1119")
+	//node9 := makeDHTNode(&id9, "localhost", "1120")
+	//node10 := makeDHTNode(&id10, "localhost", "1121")
+	//node11 := makeDHTNode(&id11, "localhost", "1122")
+	//node12 := makeDHTNode(&id12, "localhost", "1123")
+	//node13 := makeDHTNode(&id13, "localhost", "1124")
+	//node14 := makeDHTNode(&id14, "localhost", "1125")
+	//node15 := makeDHTNode(&id15, "localhost", "1126")
 
 	//node0 := makeDHTNode(nil, "localhost", "1111")
 	//node1 := makeDHTNode(nil, "localhost", "1112")
@@ -189,20 +189,20 @@ func TestFinger3bits(t *testing.T) {
 	//node15 := makeDHTNode(nil, "localhost", "1126")
 
 	node0.addToRing(node1)
-	node1.addToRing(node2)
-	node1.addToRing(node3)
-	node1.addToRing(node4)
-	node4.addToRing(node5)
-	node3.addToRing(node6)
-	node3.addToRing(node7) /*
-		node3.addToRing(node8)
-		node3.addToRing(node9)
-		node3.addToRing(node10)
-		node3.addToRing(node11)
-		node3.addToRing(node12)
-		node3.addToRing(node13)
-		node3.addToRing(node14)
-		node3.addToRing(node15)*/
+	//node1.addToRing(node2)
+	//node1.addToRing(node3)
+	//node1.addToRing(node4)
+	//node4.addToRing(node5)
+	//node3.addToRing(node6)
+	//node3.addToRing(node7)
+	//node3.addToRing(node8)
+	//node3.addToRing(node9)
+	//node3.addToRing(node10)
+	//node3.addToRing(node11)
+	//node3.addToRing(node12)
+	//node3.addToRing(node13)
+	//node3.addToRing(node14)
+	//node3.addToRing(node15)
 
 	//id0 := "0"
 	//node0 := makeDHTNode(&id0, "localhost", "1111")

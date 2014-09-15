@@ -86,7 +86,7 @@ func (n *Node) initFingerTable(node *Node) {
 	for i := 1; i < 3; i++ {
 		id2 = node.finger[i-1].node.nodeId
 		keyId = node.finger[i].start
-		if between(id1, id2, keyId) { // [node.nodeId, finger[i-1].node.nodeId)
+		if between(id1, id2, keyId) { // if keyId is in [node, finger[i-1].node)
 			node.finger[i].node = node.finger[i-1].node
 		} else {
 			node.finger[i].node = n.findSuccessor(node.finger[i].start)
@@ -108,8 +108,7 @@ func (n *Node) updateOthers() {
 		x.Sub(x, sum)
 
 		result := x.Bytes()
-		//p := n.findPredecessor(result)
-		p := n.findPredecessor(result).successor
+		p := n.findPredecessor(result)
 
 		fmt.Println("n - 2^i: ", x)
 		fmt.Println("byte array result: ", result)
@@ -119,53 +118,51 @@ func (n *Node) updateOthers() {
 	}
 }
 
-func (n *Node) updateFingerTable(node *Node, i int) {
-	//id1 := n.nodeId
-	//id2 := n.finger[i].node.nodeId
-	//keyId := node.nodeId
+func (n *Node) updateFingerTable(s *Node, i int) {
+	id1 := n.nodeId
+	id2 := n.finger[i].node.nodeId
+	keyId := s.nodeId
 
-	//if between(id1, id2, keyId) { // [n.nodeId, n.finger[i].node)
-	//	fmt.Println("")
-	//	fmt.Println("")
-	//	fmt.Print("Node ", node.nodeId) // node 5 verkar aldrig uppdatera node 1
-	//	fmt.Print(" updated node ", n.nodeId)
-	//	fmt.Println("")
-	//	fmt.Println("")
-	//	fmt.Println("")
-	//	n.finger[i].node = node
+	if between(id1, id2, keyId) { // if s is in [n, n.finger[i].node)
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Print("Node ", s.nodeId) // node 5 verkar aldrig uppdatera node 1
+		fmt.Print(" updated node ", n.nodeId)
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("")
+		n.finger[i].node = s
 
-	//	// behövs dessa???
-	//	//p := n.predecessor
-	//	//p.updateFingerTable(node, i)
-	//}
+		// behövs dessa???
+		p := n.predecessor
+		p.updateFingerTable(s, i)
+	}
 
-	fmt.Println("")
-	fmt.Println("")
-	fmt.Print("Node ", node.nodeId) // node 5 verkar aldrig uppdatera node 1
-	fmt.Print(" updated node ", n.nodeId)
-	fmt.Println("")
-	fmt.Println("")
-	fmt.Println("")
-	n.finger[i].node = node
+	//fmt.Println("")
+	//fmt.Println("")
+	//fmt.Print("Node ", node.nodeId) // node 5 verkar aldrig uppdatera node 1
+	//fmt.Print(" updated node ", n.nodeId)
+	//fmt.Println("")
+	//fmt.Println("")
+	//fmt.Println("")
+	//n.finger[i].node = node
 }
 
 func (n *Node) findSuccessor(id []byte) *Node {
 	predecessor := n.findPredecessor(id)
 	return predecessor.successor
-
-	//id1 := n.nodeId
-	//id2 := n.successor.nodeId
-
-	//if between2(id1, id2, id) {
-	//	return n.successor
-	//} else {
-	//	return n.successor.findSuccessor(id)
-	//}
 }
 
 func (n *Node) findPredecessor(id []byte) *Node {
 	//id1 := n.nodeId
 	//id2 := n.successor.nodeId
+
+	//if between(id1, id2, id) {
+	//	return n
+	//} else {
+	//	return n.closestPrecedingFinger(id).findPredecessor(id)
+	//}
+
 	//predecessor := n
 
 	//for i := n; between(id1, id2, id) == false; i = i.closestPrecedingFinger(id) {
@@ -175,16 +172,24 @@ func (n *Node) findPredecessor(id []byte) *Node {
 	//	fmt.Println(predecessor.nodeId)
 	//}
 	//return predecessor
-	return n.lookup(id)
+
+	// simple version, does nt use fingers
+	id1 := n.nodeId
+	id2 := n.successor.nodeId
+
+	if between2(id1, id2, id) { // if id is in (n, n.successor]
+		return n
+	} else {
+		return n.successor.findPredecessor(id)
+	}
 }
 
 func (n *Node) closestPrecedingFinger(id []byte) *Node {
 	id1 := n.nodeId
-	id2 := id
 
 	for i := 3; i > 0; i-- {
 		keyId := n.finger[i-1].node.nodeId
-		if between(id1, id2, keyId) {
+		if strictlyBetween(id1, id, keyId) { // if keyId is in (n, id)
 			return n.finger[i-1].node
 		}
 	}
@@ -226,13 +231,13 @@ func (n *Node) testCalcFingers(k int, m int) {
 //	fmt.Println("")
 //}
 
-func (n *Node) lookup(key []byte) *Node {
-	id1 := n.nodeId
-	id2 := n.successor.nodeId
+//func (n *Node) lookup(key []byte) *Node {
+//	id1 := n.nodeId
+//	id2 := n.successor.nodeId
 
-	if between(id1, id2, key) {
-		return n
-	} else {
-		return n.successor.lookup(key)
-	}
-}
+//	if between2(id1, id2, key) {
+//		return n
+//	} else {
+//		return n.successor.lookup(key)
+//	}
+//}
