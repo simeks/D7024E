@@ -1,9 +1,9 @@
 package dht
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
-	"encoding/hex"
 )
 
 // test cases can be run by calling e.g. go test -test.run TestRingSetup
@@ -168,13 +168,13 @@ func TestFinger3bits(t *testing.T) {
 	node6 := makeDHTNode(&id6, "localhost", "1117")
 	node7 := makeDHTNode(&id7, "localhost", "1118")
 
-	node0.addToRing(node1)
-	node1.addToRing(node2)
-	node1.addToRing(node3)
-	node1.addToRing(node4)
-	node4.addToRing(node5)
-	node3.addToRing(node6)
-	node3.addToRing(node7)
+	node1.addToRing(node0)
+	node2.addToRing(node0)
+	node3.addToRing(node0)
+	node4.addToRing(node0)
+	node5.addToRing(node0)
+	node6.addToRing(node0)
+	node7.addToRing(node0)
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")

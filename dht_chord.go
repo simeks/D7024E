@@ -1,8 +1,8 @@
 package dht
 
 import (
-	"fmt"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 )
 
@@ -15,19 +15,18 @@ type Finger struct {
 
 type Node struct {
 	nodeId      []byte
-	ip      	string
-	port    	string
+	ip          string
+	port        string
 	finger      [3]Finger
 	successor   *Node
 	predecessor *Node
 }
 
-
 func makeDHTNode(id *string, ip string, port string) *Node {
 	if id == nil {
 		idStr := generateNodeId()
 		id = &idStr
-	} 
+	}
 
 	x := big.Int{}
 	x.SetString(*id, 16)
@@ -45,11 +44,11 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 	return newNode
 }
 
-// node joins the network;
-// this is an arbitrary node in the network
+// this joins the network;
+// node is an arbitrary node in the network
 func (this *Node) addToRing(node *Node) {
 	if node != nil {
-		node.initFingerTables(node)
+		this.initFingerTables(node)
 		this.updateOthers()
 		// move keys in (predecessor, n] from successor
 	} else { // this is the only node in the network
@@ -112,16 +111,23 @@ func (this *Node) findSuccessor(id []byte) *Node {
 }
 
 func (this *Node) findPredecessor(id []byte) *Node {
-	np := this
+	//np := this
 
-	for ; between(np.nodeId, np.successor.nodeId, id) == false; {
-		np = np.closestPrecedingFinger(id)
+	//for between(np.nodeId, np.successor.nodeId, id) == false {
+	//	np = np.closestPrecedingFinger(id)
+	//}
+	//return np
+
+	// simple version, does not use fingers
+	if between(this.nodeId, this.successor.nodeId, id) { // if id is in (n, n.successor]
+		return this
+	} else {
+		return this.successor.findPredecessor(id)
 	}
-	return np
 }
 
 func (this *Node) closestPrecedingFinger(id []byte) *Node {
-	for i := num_bits-1; i >= 0; i-- {
+	for i := num_bits - 1; i >= 0; i-- {
 		if between(this.nodeId, id, this.finger[i].node.nodeId) {
 			return this.finger[i].node
 		}
