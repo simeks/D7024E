@@ -7,7 +7,7 @@ import (
 	"math/rand"
 )
 
-var num_bits int = 3
+var num_bits int = 160
 
 type Finger struct {
 	node  *Node
@@ -18,8 +18,7 @@ type Node struct {
 	nodeId      []byte
 	ip          string
 	port        string
-	finger      [3]Finger
-	//successor   *Node
+	finger      [160]Finger
 	predecessor *Node
 }
 
@@ -89,7 +88,7 @@ func (this *Node) lookup(key string) *Node {
 // and tell the successor about n. 
 func (this *Node) stabilize() {
 	x := this.finger[0].node.predecessor
-	if between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
+	if x != nil && between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
 		this.finger[0].node = x
 	}
 	this.finger[0].node.notify(this)
