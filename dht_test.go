@@ -88,6 +88,29 @@ func TestLookup(t *testing.T) {
 	node3.addToRing(node8)
 	node7.addToRing(node9)
 
+	for i := 0; i < 10; i++ {
+		node1.stabilize()
+		node2.stabilize()
+		node3.stabilize()
+		node4.stabilize()
+		node5.stabilize()
+		node6.stabilize()
+		node7.stabilize()
+		node8.stabilize()
+		node9.stabilize()
+	}
+	for i := 0; i < 10; i++ {
+		node1.fixFingers()
+		node2.fixFingers()
+		node3.fixFingers()
+		node4.fixFingers()
+		node5.fixFingers()
+		node6.fixFingers()
+		node7.fixFingers()
+		node8.fixFingers()
+		node9.fixFingers()
+	}
+
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")

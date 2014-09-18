@@ -81,7 +81,11 @@ func (this *Node) closestPrecedingFinger(id []byte) *Node {
 }
 
 func (this *Node) lookup(key string) *Node {
-	return new(Node)
+	id := big.Int{}
+	id.SetString(key, 16)
+	idBytes := id.Bytes()
+
+	return this.findSuccessor(idBytes)
 }
 
 // periodically verify n’s immediate successor,
