@@ -182,9 +182,17 @@ func TestFinger3bits(t *testing.T) {
 		node5.stabilize()
 		node6.stabilize()
 		node7.stabilize()
-	
 	}
-	
+	for i := 0; i < 10; i++ {
+		node0.fixFingers()
+		node1.fixFingers()
+		node2.fixFingers()
+		node3.fixFingers()
+		node4.fixFingers()
+		node5.fixFingers()
+		node6.fixFingers()
+		node7.fixFingers()
+	}
 	
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")

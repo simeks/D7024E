@@ -19,7 +19,7 @@ type Node struct {
 	ip          string
 	port        string
 	finger      [3]Finger
-	successor   *Node
+	//successor   *Node
 	predecessor *Node
 }
 
@@ -38,7 +38,12 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 	newNode.ip = ip
 	newNode.port = port
 	newNode.predecessor = newNode
-	newNode.successor = newNode
+
+	for i := 0; i < num_bits; i++ {
+		_, start := calcFinger(idBytes, i+1, num_bits)
+		newNode.finger[i].start = start
+	}
+	newNode.finger[0].node = newNode
 
 	return newNode
 }
@@ -47,21 +52,20 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 // node is an arbitrary node in the network
 func (this *Node) addToRing(np *Node) {
 	this.predecessor = nil
-	this.successor = np.findSuccessor(this.nodeId)
-
+	this.finger[0].node = np.findSuccessor(this.nodeId)
 }
 
 // ask node n to find id's successor
 func (this *Node) findSuccessor(id []byte) *Node {
 	np := this.findPredecessor(id)
-	return np.successor
+	return np.finger[0].node
 }
 
 // ask node n to find id's predecessor
 func (this *Node) findPredecessor(id []byte) *Node {
 	np := this
 
-	for ; between(np.nodeId, np.successor.nodeId, id) == false; {
+	for ; between(np.nodeId, np.finger[0].node.nodeId, id) == false; {
 		np = np.closestPrecedingFinger(id)
 	}
 	return np
@@ -70,7 +74,7 @@ func (this *Node) findPredecessor(id []byte) *Node {
 // return closest finger preceding id
 func (this *Node) closestPrecedingFinger(id []byte) *Node {
 	for i := num_bits-1; i >= 0; i-- {
-		if between3(this.nodeId, id, this.finger[i].node.nodeId) {
+		if this.finger[i].node != nil && between3(this.nodeId, id, this.finger[i].node.nodeId) {
 			return this.finger[i].node
 		}
 	}
@@ -84,11 +88,11 @@ func (this *Node) lookup(key string) *Node {
 // periodically verify n’s immediate successor,
 // and tell the successor about n. 
 func (this *Node) stabilize() {
-	x := this.successor.predecessor
-	if between3(this.nodeId, this.successor.nodeId, x.nodeId) {
-		this.successor = x
+	x := this.finger[0].node.predecessor
+	if between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
+		this.finger[0].node = x
 	}
-	this.successor.notify(this)
+	this.finger[0].node.notify(this)
 }
 
 // np thinks it might be our predecessor. 
@@ -106,18 +110,24 @@ func (this *Node) fixFingers() {
 func (this *Node) printRing() {
 	this.printNode()
 
-	for i := this.successor; i != this; i = i.successor {
+	for i := this.finger[0].node; i != this; i = i.finger[0].node {
 		i.printNode()
 	}
 }
 
 func (this *Node) printNode() {
 	fmt.Println("Node "+":", hex.EncodeToString(this.nodeId))
-	if this.successor != nil {
-		fmt.Println("Successor "+":", hex.EncodeToString(this.successor.nodeId))
+	if this.finger[0].node != nil {
+		fmt.Println("Successor "+":", hex.EncodeToString(this.finger[0].node.nodeId))
 	}
 	if this.predecessor != nil {
 		fmt.Println("Predecessors"+":", hex.EncodeToString(this.predecessor.nodeId))
+	}
+	fmt.Println("Fingers")
+	for i := 0; i < num_bits; i++ {
+		if this.finger[i].node != nil {
+			fmt.Println("Start:",hex.EncodeToString(this.finger[i].start),"Id:", hex.EncodeToString(this.finger[i].node.nodeId))
+		}
 	}
 	fmt.Println("")	
 }
