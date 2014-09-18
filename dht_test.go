@@ -44,10 +44,6 @@ func TestRingSetup(t *testing.T) {
 	node8 := makeDHTNode(&id7, "localhost", "1118")
 	node9 := makeDHTNode(&id8, "localhost", "1119")
 
-	fmt.Println("Node: ", hex.EncodeToString(node1.nodeId))
-	fmt.Println("Successor: ", hex.EncodeToString(node1.successor.nodeId))
-	fmt.Println("Predecessor: ", hex.EncodeToString(node1.predecessor.nodeId))
-
 	node1.addToRing(node2)
 	node1.addToRing(node3)
 	node1.addToRing(node4)
@@ -176,10 +172,26 @@ func TestFinger3bits(t *testing.T) {
 	node6.addToRing(node0)
 	node7.addToRing(node0)
 
+	for i := 0; i < 10; i++ {
+
+		node0.stabilize()
+		node1.stabilize()
+		node2.stabilize()
+		node3.stabilize()
+		node4.stabilize()
+		node5.stabilize()
+		node6.stabilize()
+		node7.stabilize()
+	
+	}
+	
+	
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	node1.printRing()
+
+
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
 	node3.testCalcFingers(1, 3)
