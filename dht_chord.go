@@ -2,10 +2,11 @@
 package dht
 
 import (
-	"fmt"
-	//"math"
+	"bytes"
 	"encoding/hex"
+	"fmt"
 	"math/big"
+	//"math/rand"
 	"strconv"
 )
 
@@ -55,11 +56,6 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 
 func (n *Node) addToRing(node *Node) {
 
-	node.successor = n.findSuccessor(node.nodeId)
-	node.predecessor = node.successor.predecessor
-	node.successor.predecessor = node
-	node.predecessor.successor = node
-
 	//init finger table
 	n.initFingerTable(node)
 
@@ -73,6 +69,12 @@ func (n *Node) addToRing(node *Node) {
 
 func (n *Node) initFingerTable(node *Node) {
 	node.finger[0].node = n.findSuccessor(node.finger[0].start)
+
+	node.successor = node.finger[0].node
+	node.predecessor = node.successor.predecessor
+	node.successor.predecessor = node
+	node.predecessor.successor = node
+
 	fmt.Println("")
 	fmt.Println("------------------------------------------------- Node: ", node.nodeId)
 
@@ -87,7 +89,8 @@ func (n *Node) initFingerTable(node *Node) {
 	for i := 1; i < 3; i++ {
 		id2 = node.finger[i-1].node.nodeId
 		keyId = node.finger[i].start
-		if between(id1, id2, keyId) { // if keyId is in [node, finger[i-1].node)
+		//if between(id1, id2, keyId) { // if keyId is in [node, finger[i-1].node)
+		if between2(id1, id2, keyId) {
 			node.finger[i].node = node.finger[i-1].node
 		} else {
 			node.finger[i].node = n.findSuccessor(node.finger[i].start)
@@ -108,72 +111,44 @@ func (n *Node) updateOthers() {
 		x.SetString(fmt.Sprintf("%x", n.nodeId), 16)
 		x.Sub(x, sum)
 
-		// for test, have to fix this in a better way later
-		if n.nodePort == "1112" {
-			y := big.NewInt(-3)
-			if x.String() == y.String() {
-				x = big.NewInt(1)
-			}
-		}
-		// for test, have to fix this in a better way later
-		if n.nodePort == "1113" {
-			y := big.NewInt(-2)
-			if x.String() == y.String() {
-				x = big.NewInt(1)
-			}
-		}
-		// for test, have to fix this in a better way later
-		if n.nodePort == "1114" {
-			y := big.NewInt(-1)
-			if x.String() == y.String() {
-				x = big.NewInt(3)
-			}
-		}
-
 		result := x.Bytes()
-		//p := n.findPredecessor(result)
-		p := n.findSuccessor(result) // findSuccessor returns the node where nodeId == result
+		p := n.findSuccessor(result)
 
-		fmt.Println("n - 2^i: ", x)
-		fmt.Println("byte array result: ", result)
-		fmt.Println("update this node: ", p.nodeId)
+		if bytes.Compare(p.nodeId, result) != 0 {
+			p = p.predecessor
+		}
 
-		p.updateFingerTable(n, i)
+		if x.Int64() >= 0 {
+			fmt.Println("n - 2^i: ", x)
+			fmt.Println("byte array result: ", result)
+			fmt.Println("update this node: ", p.nodeId)
+
+			p.updateFingerTable(n, i)
+		}
 	}
 }
 
 func (n *Node) updateFingerTable(s *Node, i int) {
-	//id1 := n.nodeId
-	//id2 := n.finger[i].node.nodeId
-	//keyId := s.nodeId
+	id1 := n.nodeId
+	id2 := n.finger[i].node.nodeId
+	keyId := s.nodeId
 
-	//if between(id1, id2, keyId) { // if s is in [n, n.finger[i].node)
-	//	n.finger[i].node = s
-	//	fmt.Println("")
-	//	fmt.Println("")
-	//	fmt.Print("Node ", n.nodeId)
-	//	fmt.Print(", finger["+strconv.Itoa(i)+"] is now ", s.nodeId)
-	//	fmt.Println("")
-	//	fmt.Print("Node ", s.nodeId)
-	//	fmt.Print(" has now updated node ", n.nodeId)
-	//	fmt.Println("")
-	//	fmt.Println("")
+	//if between(id1, id2, keyId) {
+	if strictlyBetween(id1, id2, keyId) {
+		n.finger[i].node = s
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Print("Node ", n.nodeId)
+		fmt.Print(", finger["+strconv.Itoa(i)+"] is now ", s.nodeId)
+		fmt.Println("")
+		fmt.Print("Node ", s.nodeId)
+		fmt.Print(" has now updated node ", n.nodeId)
+		fmt.Println("")
+		fmt.Println("")
 
-	//	// behövs dessa???
-	//	//p := n.predecessor
-	//	//p.updateFingerTable(s, i)
-	//}
-
-	n.finger[i].node = s
-	fmt.Println("")
-	fmt.Println("")
-	fmt.Print("Node ", n.nodeId)
-	fmt.Print(", finger["+strconv.Itoa(i)+"] is now ", s.nodeId)
-	fmt.Println("")
-	fmt.Print("Node ", s.nodeId)
-	fmt.Print(" has now updated node ", n.nodeId)
-	fmt.Println("")
-	fmt.Println("")
+		p := n.predecessor
+		p.updateFingerTable(s, i)
+	}
 }
 
 func (n *Node) findSuccessor(id []byte) *Node {
@@ -182,36 +157,12 @@ func (n *Node) findSuccessor(id []byte) *Node {
 }
 
 func (n *Node) findPredecessor(id []byte) *Node {
-	//id1 := n.nodeId
-	//id2 := n.successor.nodeId
+	np := n
 
-	//if between(id1, id2, id) {
-	//	return n
-	//} else {
-	//	return n.closestPrecedingFinger(id).findPredecessor(id)
-	//}
-
-	//id1 := n.nodeId
-	//id2 := n.successor.nodeId
-	//predecessor := n
-
-	//for i := n; between2(id1, id2, id) == false; i = i.closestPrecedingFinger(id) {
-	//	id1 = i.closestPrecedingFinger(id).nodeId
-	//	id2 = i.closestPrecedingFinger(id).successor.nodeId
-	//	predecessor = i.closestPrecedingFinger(id)
-	//	fmt.Println(predecessor.nodeId)
-	//}
-	//return predecessor
-
-	// simple version, does nt use fingers
-	id1 := n.nodeId
-	id2 := n.successor.nodeId
-
-	if between2(id1, id2, id) { // if id is in (n, n.successor]
-		return n
-	} else {
-		return n.successor.findPredecessor(id)
+	for between2(np.nodeId, np.successor.nodeId, id) == false {
+		np = np.closestPrecedingFinger(id)
 	}
+	return np
 }
 
 func (n *Node) closestPrecedingFinger(id []byte) *Node {
@@ -225,6 +176,30 @@ func (n *Node) closestPrecedingFinger(id []byte) *Node {
 	}
 	return n
 }
+
+// periodically verify n's immediate successor,
+// and tell the successor about n
+//func (n *Node) stabilize() {
+//	x := n.successor.predecessor
+
+//	if strictlyBetween(n.nodeId, n.successor.nodeId, x.nodeId) {
+//		n.successor = x
+//		n.successor.notify(n)
+//	}
+//}
+
+// n2 thinks it might be our predecessor
+//func (n *Node) notify(n2 *Node) {
+//	if n.predecessor == nil || strictlyBetween(n.predecessor.nodeId, n.nodeId, n2.nodeId) {
+//		n.predecessor = n2
+//	}
+//}
+
+// periodically refresh finger table entries
+//func (n *Node) fixFingers() {
+//	i := rand.Int63n(3)
+//	n.finger[i].node = n.findSuccessor(n.finger[i].start)
+//}
 
 func (n *Node) printRing() {
 	fmt.Println("Node "+":", hex.EncodeToString(n.nodeId))
@@ -243,23 +218,6 @@ func (n *Node) printRing() {
 func (n *Node) testCalcFingers(k int, m int) {
 
 }
-
-//only for test
-//func (n *Node) updateFingerTables() {
-//	k := 1
-//	fmt.Println("Node ", n.nodeId)
-//	for k <= 3 {
-//		_, s := calcFinger(n.nodeId, k, 3)
-//		n.finger[k-1].node = n.lookup(s)
-
-//		// printa bara ut 3 första fingrarna
-//		if k <= 3 {
-//			fmt.Println("Finger "+strconv.Itoa(k)+": ", n.finger[k-1].node.nodeId)
-//		}
-//		k++
-//	}
-//	fmt.Println("")
-//}
 
 //func (n *Node) lookup(key []byte) *Node {
 //	id1 := n.nodeId

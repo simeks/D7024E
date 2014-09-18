@@ -258,9 +258,9 @@ func TestFinger3bits(t *testing.T) {
 	//fmt.Println("Node 01, finger 3: " + node0.finger[2].node.nodeId)
 	//fmt.Println("Node 01, finger 4: " + node0.finger[3].node.nodeId)
 
-	fmt.Println("------------------------------------------------------------------------------------------------")
-	fmt.Println("FINGER.start")
-	fmt.Println("------------------------------------------------------------------------------------------------")
+	//fmt.Println("------------------------------------------------------------------------------------------------")
+	//fmt.Println("FINGER.start")
+	//fmt.Println("------------------------------------------------------------------------------------------------")
 
 	// prints out finger[i].start
 	//fmt.Println("Node ", hex.EncodeToString(node0.nodeId))
@@ -276,13 +276,7 @@ func TestFinger3bits(t *testing.T) {
 	//	fmt.Println("")
 	//}
 
-	fmt.Println("------------------------------------------------------------------------------------------------")
-
-	//node0.updateFingerTables()
-	//for j := node0.successor; j != node0; j = j.successor {
-	//	j.updateFingerTables()
-	//}
-
+	//fmt.Println("------------------------------------------------------------------------------------------------")
 }
 
 /*
