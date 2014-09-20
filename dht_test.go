@@ -79,14 +79,14 @@ func TestLookup(t *testing.T) {
 	node8 := makeDHTNode(nil, "localhost", "1118")
 	node9 := makeDHTNode(nil, "localhost", "1119")
 
-	node1.addToRing(node2)
-	node1.addToRing(node3)
-	node1.addToRing(node4)
-	node4.addToRing(node5)
-	node3.addToRing(node6)
-	node3.addToRing(node7)
-	node3.addToRing(node8)
-	node7.addToRing(node9)
+	node2.addToRing(node1)
+	node3.addToRing(node1)
+	node4.addToRing(node1)
+	node5.addToRing(node1)
+	node6.addToRing(node1)
+	node7.addToRing(node1)
+	node8.addToRing(node1)
+	node9.addToRing(node1)
 
 	for i := 0; i < 10; i++ {
 		node1.stabilize()
@@ -216,12 +216,11 @@ func TestFinger3bits(t *testing.T) {
 		node6.fixFingers()
 		node7.fixFingers()
 	}
-	
+
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	node1.printRing()
-
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
@@ -307,15 +306,14 @@ func TestFinger160bits(t *testing.T) {
 	node8 := makeDHTNode(nil, "localhost", "1118")
 	node9 := makeDHTNode(nil, "localhost", "1119")
 
-	node1.addToRing(node2)
-	node1.addToRing(node3)
-	node1.addToRing(node4)
-	node4.addToRing(node5)
-	node3.addToRing(node6)
-	node3.addToRing(node7)
-	node3.addToRing(node8)
-	node7.addToRing(node9)
-
+	node2.addToRing(node1)
+	node3.addToRing(node1)
+	node4.addToRing(node1)
+	node5.addToRing(node1)
+	node6.addToRing(node1)
+	node7.addToRing(node1)
+	node8.addToRing(node1)
+	node9.addToRing(node1)
 
 	for i := 0; i < 20; i++ {
 		node1.stabilize()
@@ -328,7 +326,7 @@ func TestFinger160bits(t *testing.T) {
 		node8.stabilize()
 		node9.stabilize()
 	}
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 50; i++ {
 		node1.fixFingers()
 		node2.fixFingers()
 		node3.fixFingers()
@@ -339,7 +337,6 @@ func TestFinger160bits(t *testing.T) {
 		node8.fixFingers()
 		node9.fixFingers()
 	}
-	
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")

@@ -64,7 +64,7 @@ func (this *Node) findSuccessor(id []byte) *Node {
 func (this *Node) findPredecessor(id []byte) *Node {
 	np := this
 
-	for ; between(np.nodeId, np.finger[0].node.nodeId, id) == false; {
+	for between(np.nodeId, np.finger[0].node.nodeId, id) == false {
 		np = np.closestPrecedingFinger(id)
 	}
 	return np
@@ -72,7 +72,7 @@ func (this *Node) findPredecessor(id []byte) *Node {
 
 // return closest finger preceding id
 func (this *Node) closestPrecedingFinger(id []byte) *Node {
-	for i := num_bits-1; i >= 0; i-- {
+	for i := num_bits - 1; i >= 0; i-- {
 		if this.finger[i].node != nil && between3(this.nodeId, id, this.finger[i].node.nodeId) {
 			return this.finger[i].node
 		}
@@ -89,7 +89,7 @@ func (this *Node) lookup(key string) *Node {
 }
 
 // periodically verify n’s immediate successor,
-// and tell the successor about n. 
+// and tell the successor about n.
 func (this *Node) stabilize() {
 	x := this.finger[0].node.predecessor
 	if x != nil && between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
@@ -98,7 +98,7 @@ func (this *Node) stabilize() {
 	this.finger[0].node.notify(this)
 }
 
-// np thinks it might be our predecessor. 
+// np thinks it might be our predecessor.
 func (this *Node) notify(np *Node) {
 	if this.predecessor == nil || between3(this.predecessor.nodeId, this.nodeId, np.nodeId) {
 		this.predecessor = np
@@ -126,13 +126,13 @@ func (this *Node) printNode() {
 	if this.predecessor != nil {
 		fmt.Println("Predecessors"+":", hex.EncodeToString(this.predecessor.nodeId))
 	}
-	fmt.Println("Fingers")
-	for i := 0; i < num_bits; i++ {
-		if this.finger[i].node != nil {
-			fmt.Println("Start:",hex.EncodeToString(this.finger[i].start),"Id:", hex.EncodeToString(this.finger[i].node.nodeId))
-		}
-	}
-	fmt.Println("")	
+	//fmt.Println("Fingers")
+	//for i := 0; i < num_bits; i++ {
+	//	if this.finger[i].node != nil {
+	//		fmt.Println("Start:",hex.EncodeToString(this.finger[i].start),"Id:", hex.EncodeToString(this.finger[i].node.nodeId))
+	//	}
+	//}
+	fmt.Println("")
 }
 
 func (this *Node) testCalcFingers(k int, m int) {
