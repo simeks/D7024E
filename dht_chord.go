@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	//"strconv"
 )
 
 var num_bits int = 160
@@ -129,11 +130,73 @@ func (this *Node) printNode() {
 	//fmt.Println("Fingers")
 	//for i := 0; i < num_bits; i++ {
 	//	if this.finger[i].node != nil {
-	//		fmt.Println("Start:",hex.EncodeToString(this.finger[i].start),"Id:", hex.EncodeToString(this.finger[i].node.nodeId))
+	//		fmt.Println(strconv.Itoa(i)+" "+"Start:", hex.EncodeToString(this.finger[i].start), "Id:", hex.EncodeToString(this.finger[i].node.nodeId))
 	//	}
 	//}
 	fmt.Println("")
 }
 
+/*
+ * Example of expected output.
+ *
+ * calulcating result = (n+2^(k-1)) mod (2^m)
+ * n            682874255151879437996522856919401519827635625586
+ * k            0
+ * m            160
+ * 2^(k-1)      1
+ * (n+2^(k-1))  682874255151879437996522856919401519827635625587
+ * 2^m          1461501637330902918203684832716283019655932542976
+ * finger       682874255151879437996522856919401519827635625587
+ * finger (hex) 779d240121ed6d5e8bd0cb6529b08e5c617b5e73
+ * successor    779d240121ed6d5e8bd0cb6529b08e5c617b5e72
+ * distance     0
+ */
 func (this *Node) testCalcFingers(k int, m int) {
+	fmt.Println("calulcating result = (n+2^(k-1)) mod (2^m)")
+
+	// convert the n to a bigint
+	nBigInt := big.Int{}
+	nBigInt.SetBytes(this.nodeId)
+	//fmt.Printf("n            %s\n", nBigInt.String())
+	fmt.Printf("n            %s\n", hex.EncodeToString(this.nodeId))
+
+	fmt.Printf("k            %d\n", k)
+
+	fmt.Printf("m            %d\n", m)
+
+	// get the right addend, i.e. 2^(k-1)
+	two := big.NewInt(2)
+	addend := big.Int{}
+	addend.Exp(two, big.NewInt(int64(k-1)), nil)
+
+	fmt.Printf("2^(k-1)      %s\n", addend.String())
+
+	// calculate sum
+	sum := big.Int{}
+	sum.Add(&nBigInt, &addend)
+
+	fmt.Printf("(n+2^(k-1))  %s\n", sum.String())
+
+	// calculate 2^m
+	ceil := big.Int{}
+	ceil.Exp(two, big.NewInt(int64(m)), nil)
+
+	fmt.Printf("2^m          %s\n", ceil.String())
+
+	// apply the mod
+	result := big.Int{}
+	result.Mod(&sum, &ceil)
+
+	fmt.Printf("finger       %s\n", result.String())
+
+	resultBytes := result.Bytes()
+	resultHex := fmt.Sprintf("%x", resultBytes)
+
+	fmt.Printf("finger (hex) %s\n", resultHex)
+
+	fmt.Println("successor   ", hex.EncodeToString(this.findSuccessor(resultBytes).nodeId))
+
+	dist := distance(this.nodeId, resultBytes, num_bits)
+
+	fmt.Println("distance     " + dist.String())
 }

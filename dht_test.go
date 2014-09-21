@@ -326,7 +326,7 @@ func TestFinger160bits(t *testing.T) {
 		node8.stabilize()
 		node9.stabilize()
 	}
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 500; i++ {
 		node1.fixFingers()
 		node2.fixFingers()
 		node3.fixFingers()
