@@ -6,9 +6,10 @@ import (
 	"math/big"
 	"math/rand"
 	//"strconv"
+	"sync"
 )
 
-var num_bits int = 160
+const num_bits int = 160
 
 type Finger struct {
 	node  *Node
@@ -19,8 +20,9 @@ type Node struct {
 	nodeId      []byte
 	ip          string
 	port        string
-	finger      [160]Finger
+	finger      [num_bits]Finger
 	predecessor *Node
+	mutex       sync.Mutex
 }
 
 func makeDHTNode(id *string, ip string, port string) *Node {
@@ -51,8 +53,10 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 // this joins the network;
 // node is an arbitrary node in the network
 func (this *Node) addToRing(np *Node) {
+	this.mutex.Lock()
 	this.predecessor = nil
 	this.finger[0].node = np.findSuccessor(this.nodeId)
+	this.mutex.Unlock()
 }
 
 // ask node n to find id's successor
@@ -92,11 +96,13 @@ func (this *Node) lookup(key string) *Node {
 // periodically verify n’s immediate successor,
 // and tell the successor about n.
 func (this *Node) stabilize() {
+	this.mutex.Lock()
 	x := this.finger[0].node.predecessor
 	if x != nil && between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
 		this.finger[0].node = x
 	}
 	this.finger[0].node.notify(this)
+	this.mutex.Unlock()
 }
 
 // np thinks it might be our predecessor.
@@ -107,8 +113,10 @@ func (this *Node) notify(np *Node) {
 }
 
 func (this *Node) fixFingers() {
+	this.mutex.Lock()
 	i := rand.Intn(num_bits)
 	this.finger[i].node = this.findSuccessor(this.finger[i].start)
+	this.mutex.Unlock()
 }
 
 func (this *Node) printRing() {
