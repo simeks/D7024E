@@ -1,7 +1,8 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
+	"time"
 	"os"
 )
 
@@ -14,6 +15,16 @@ type App struct {
 func (this *App) init(bindAddr, bindPort string) {
 	this.node = makeDHTNode(nil, bindAddr, bindPort)
 	this.transport = Transport{bindAddr+":"+bindPort}
+
+	// call stabilize and fixFingers periodically
+	go func() {
+		c := time.Tick(3 * time.Second)
+		for now := range c {
+			fmt.Println(now)
+			this.node.stabilize()
+			this.node.fixFingers()
+		}
+	}()
 }
 
 // Tries to join the node at the specified address.
