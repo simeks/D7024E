@@ -7,9 +7,10 @@ import (
 )
 
 type Msg struct {
-	key		string
-	src 	string
-	dst 	string
+	Type 	string
+	Key		string
+	Src 	string
+	Dst 	string
 }
 
 type Transport struct {
@@ -26,11 +27,12 @@ func (transport *Transport) listen() {
 		dec.Decode(&msg)
 		// we got a message
 		// ...
+		fmt.Println("msg:",msg)
 	}
 } 
 
 func (transport *Transport) send(msg *Msg) {
-	udpAddr, err := net.ResolveUDPAddr("udp", msg.dst)
+	udpAddr, err := net.ResolveUDPAddr("udp", msg.Dst)
 
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	defer conn.Close()
@@ -46,4 +48,6 @@ func (transport *Transport) send(msg *Msg) {
 		fmt.Println(err)
 		return
 	}
+	
+	fmt.Println("Msg:",msg,"Sent:",string(bytes))
 }
