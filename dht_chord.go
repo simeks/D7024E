@@ -25,6 +25,12 @@ type Node struct {
 	mutex       sync.Mutex
 }
 
+type ExternalNode struct {
+	nodeId []byte
+	ip     string
+	port   string
+}
+
 func makeDHTNode(id *string, ip string, port string) *Node {
 	if id == nil {
 		idStr := generateNodeId()
