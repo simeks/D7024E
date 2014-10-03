@@ -2,9 +2,9 @@ package main
 
 import (
 	//"encoding/hex"
-	"fmt"
+	//"fmt"
 	"math/big"
-	"math/rand"
+	//"math/rand"
 	//"strconv"
 	"sync"
 )
@@ -70,74 +70,12 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 //	this.mutex.Unlock()
 //}
 
-func (this *App) addToRing(np *ExternalNode) {
-	this.node.mutex.Lock()
-	this.node.predecessor = nil
-	this.node.mutex.Unlock()
-
-	args := new(AddArgs)
-	args.Id = this.node.nodeId
-	args.Ip = this.node.ip
-	args.Port = this.node.port
-
-	reply := new(AddReply)
-
-	addr := np.ip + ":" + np.port
-
-	// call FindSuccessor on np, which is already in the ring
-	err := this.nodeUDP.CallUDP("FindSuccessor", addr, args, reply, 3)
-
-	if err != nil {
-		fmt.Print("Call error - ")
-		fmt.Println(err.Error())
-		return
-	}
-
-	if reply != nil {
-		extNode := new(ExternalNode)
-		extNode.nodeId = reply.Id
-		extNode.ip = reply.Ip
-		extNode.port = reply.Port
-
-		this.node.mutex.Lock()
-		this.node.finger[0].node = extNode
-		this.node.mutex.Unlock()
-	}
-}
-
 // ask node n to find id's successor
 //func (this *Node) findSuccessor(id []byte) *Node {
 //	np := this.findPredecessor(id)
 //	return np.finger[0].node
 //}
 
-func (this *App) findSuccessor(id []byte) *ExternalNode {
-	np := this.findPredecessor(id)
-
-	args := new(AddArgs)
-	reply := new(AddReply)
-
-	addr := np.ip + ":" + np.port
-
-	// call GetSuccessor on np
-	err := this.nodeUDP.CallUDP("GetSuccessor", addr, args, reply, 3)
-
-	if err != nil {
-		fmt.Print("Call error - ")
-		fmt.Println(err.Error())
-		return nil
-	}
-
-	if reply != nil {
-		// now we have the successor
-		successor := new(ExternalNode)
-		successor.nodeId = reply.Id
-		successor.ip = reply.Ip
-		successor.port = reply.Port
-		return successor
-	}
-	return nil
-}
 
 // ask node n to find id's predecessor
 //func (this *Node) findPredecessor(id []byte) *Node {
@@ -149,34 +87,6 @@ func (this *App) findSuccessor(id []byte) *ExternalNode {
 //	return np
 //}
 
-func (this *App) findPredecessor(id []byte) *ExternalNode {
-	if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
-		extNode := new(ExternalNode)
-		extNode.nodeId = this.node.nodeId
-		extNode.ip = this.node.ip
-		extNode.port = this.node.port
-		return extNode
-	} else {
-		np := this.node.closestPrecedingFinger(id)
-
-		args := new(AddArgs)
-		args.Id = id
-
-		reply := new(AddReply)
-
-		addr := np.ip + ":" + np.port
-
-		// call FindPredecessor on np
-		err := this.nodeUDP.CallUDP("FindPredecessor", addr, args, reply, 3)
-
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
-			return nil
-		}
-		return nil
-	}
-}
 
 // return closest finger preceding id
 func (this *Node) closestPrecedingFinger(id []byte) *ExternalNode {
@@ -201,13 +111,6 @@ func (this *Node) closestPrecedingFinger(id []byte) *ExternalNode {
 //	return this.findSuccessor(idBytes)
 //}
 
-func (this *App) lookup(key string) *ExternalNode {
-	id := big.Int{}
-	id.SetString(key, 16)
-	idBytes := id.Bytes()
-
-	return this.findSuccessor(idBytes)
-}
 
 // periodically verify n’s immediate successor,
 // and tell the successor about n.
@@ -221,50 +124,6 @@ func (this *App) lookup(key string) *ExternalNode {
 //	this.mutex.Unlock()
 //}
 
-func (this *App) stabilize() {
-
-	args := new(AddArgs)
-	reply := new(AddReply)
-
-	addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
-
-	// call GetPredecessor on this.node's successor
-	err := this.nodeUDP.CallUDP("GetPredecessor", addr, args, reply, 3)
-
-	if err != nil {
-		fmt.Print("Call error - ")
-		fmt.Println(err.Error())
-		return
-	}
-
-	if reply != nil {
-		// now we have the predecessor
-		predecessor := new(ExternalNode)
-		predecessor.nodeId = reply.Id
-		predecessor.ip = reply.Ip
-		predecessor.port = reply.Port
-
-		if predecessor != nil && between3(this.node.nodeId, this.node.finger[0].node.nodeId, predecessor.nodeId) {
-			this.node.mutex.Lock()
-			this.node.finger[0].node = predecessor
-			this.node.mutex.Unlock()
-		}
-
-		addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
-
-		args.Id = this.node.nodeId
-		args.Ip = this.node.ip
-		args.Port = this.node.port
-
-		err := this.nodeUDP.CallUDP("Notify", addr, args, reply, 3)
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
-			return
-		}
-	}
-}
-
 // np thinks it might be our predecessor.
 func (this *Node) notify(np *ExternalNode) {
 	if this.predecessor == nil || between3(this.predecessor.nodeId, this.nodeId, np.nodeId) {
@@ -272,13 +131,6 @@ func (this *Node) notify(np *ExternalNode) {
 	}
 }
 
-func (this *App) fixFingers() {
-	i := rand.Intn(num_bits)
-	successor := this.findSuccessor(this.node.finger[i].start)
-	this.node.mutex.Lock()
-	this.node.finger[i].node = successor
-	this.node.mutex.Unlock()
-}
 
 //func (this *Node) printRing() {
 //	this.printNode()
