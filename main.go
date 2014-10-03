@@ -5,8 +5,6 @@ import (
 	"os"
 )
 
-
-
 func main() {
 	app := App{}
 
@@ -23,7 +21,7 @@ func main() {
 			}
 
 		} else if os.Args[1] == "client" {
-			app.init("127.0.0.1", "13338")
+			app.init("127.0.0.1", os.Args[2])
 
 			// run Join on the server
 			go app.join("127.0.0.1:13337")

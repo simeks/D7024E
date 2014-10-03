@@ -61,33 +61,6 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 	return newNode
 }
 
-// this joins the network;
-// node is an arbitrary node in the network
-//func (this *Node) addToRing(np *Node) {
-//	this.mutex.Lock()
-//	this.predecessor = nil
-//	this.finger[0].node = np.findSuccessor(this.nodeId)
-//	this.mutex.Unlock()
-//}
-
-// ask node n to find id's successor
-//func (this *Node) findSuccessor(id []byte) *Node {
-//	np := this.findPredecessor(id)
-//	return np.finger[0].node
-//}
-
-
-// ask node n to find id's predecessor
-//func (this *Node) findPredecessor(id []byte) *Node {
-//	np := this
-
-//	for between(np.nodeId, np.finger[0].node.nodeId, id) == false {
-//		np = np.closestPrecedingFinger(id)
-//	}
-//	return np
-//}
-
-
 // return closest finger preceding id
 func (this *Node) closestPrecedingFinger(id []byte) *ExternalNode {
 	for i := num_bits - 1; i >= 0; i-- {
@@ -103,34 +76,12 @@ func (this *Node) closestPrecedingFinger(id []byte) *ExternalNode {
 	return extNode
 }
 
-//func (this *Node) lookup(key string) *Node {
-//	id := big.Int{}
-//	id.SetString(key, 16)
-//	idBytes := id.Bytes()
-
-//	return this.findSuccessor(idBytes)
-//}
-
-
-// periodically verify n’s immediate successor,
-// and tell the successor about n.
-//func (this *Node) stabilize() {
-//	this.mutex.Lock()
-//	x := this.finger[0].node.predecessor
-//	if x != nil && between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
-//		this.finger[0].node = x
-//	}
-//	this.finger[0].node.notify(this)
-//	this.mutex.Unlock()
-//}
-
 // np thinks it might be our predecessor.
 func (this *Node) notify(np *ExternalNode) {
 	if this.predecessor == nil || between3(this.predecessor.nodeId, this.nodeId, np.nodeId) {
 		this.predecessor = np
 	}
 }
-
 
 //func (this *Node) printRing() {
 //	this.printNode()
@@ -157,21 +108,6 @@ func (this *Node) notify(np *ExternalNode) {
 //	fmt.Println("")
 //}
 
-/*
- * Example of expected output.
- *
- * calulcating result = (n+2^(k-1)) mod (2^m)
- * n            682874255151879437996522856919401519827635625586
- * k            0
- * m            160
- * 2^(k-1)      1
- * (n+2^(k-1))  682874255151879437996522856919401519827635625587
- * 2^m          1461501637330902918203684832716283019655932542976
- * finger       682874255151879437996522856919401519827635625587
- * finger (hex) 779d240121ed6d5e8bd0cb6529b08e5c617b5e73
- * successor    779d240121ed6d5e8bd0cb6529b08e5c617b5e72
- * distance     0
- */
 //func (this *Node) testCalcFingers(k int, m int) {
 //	fmt.Println("calulcating result = (n+2^(k-1)) mod (2^m)")
 
