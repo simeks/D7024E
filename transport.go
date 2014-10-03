@@ -19,11 +19,30 @@ func (s *AddService) FindSuccessor(args *AddArgs, reply *AddReply) {
 }
 
 func (s *AddService) FindPredecessor(args *AddArgs, reply *AddReply) {
-	s.app.findPredecessor(args.Id)
+	predecessor := s.app.findPredecessor(args.Id)
+	if args.Id != nil {
+		reply.Id = predecessor.nodeId
+		reply.Ip = predecessor.ip
+		reply.Port = predecessor.port
+	}
 }
 
 func (s *AddService) GetSuccessor(args *AddArgs, reply *AddReply) {
 	reply.Id = s.app.node.finger[0].node.nodeId
 	reply.Ip = s.app.node.finger[0].node.ip
 	reply.Port = s.app.node.finger[0].node.port
+}
+
+func (s *AddService) GetPredecessor(args *AddArgs, reply *AddReply) {
+	reply.Id = s.app.node.predecessor.nodeId
+	reply.Ip = s.app.node.predecessor.ip
+	reply.Port = s.app.node.predecessor.port
+}
+
+func (s *AddService) Notify(args *AddArgs, reply *AddReply) {
+	extNode := new(ExternalNode)
+	extNode.nodeId = args.Id
+	extNode.ip = args.Ip
+	extNode.port = args.Port
+	s.app.node.notify(extNode)
 }

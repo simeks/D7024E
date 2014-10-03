@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/liamzebedee/go-qrp"
 	"os"
-	//"time"
+	"time"
 )
 
 type App struct {
@@ -57,17 +57,30 @@ func (this *App) init(bindAddr, bindPort string) {
 	node.Register(getsuccessor)
 	fmt.Println("GetSuccessor service registered")
 
+	getpredecessor := new(AddService)
+	getpredecessor.app = this
+	node.Register(getpredecessor)
+	fmt.Println("GetPredecessor service registered")
+
+	notify := new(AddService)
+	notify.app = this
+	node.Register(notify)
+	fmt.Println("Notify service registered")
+
 	fmt.Println("")
 
 	// call stabilize and fixFingers periodically
-	//go func() {
-	//	c := time.Tick(3 * time.Second)
-	//	for now := range c {
-	//		fmt.Println(now)
-	//		this.node.stabilize()
-	//		this.node.fixFingers()
-	//	}
-	//}()
+	go func() {
+		c := time.Tick(3 * time.Second)
+		for now := range c {
+			fmt.Println(now)
+			this.stabilize()
+			this.fixFingers()
+
+			fmt.Println("Successor: ", hex.EncodeToString(this.node.finger[0].node.nodeId))
+			fmt.Println("")
+		}
+	}()
 }
 
 //Tries to join the node at the specified address.
@@ -99,10 +112,6 @@ func (this *App) join(addr string) {
 		// extNode is already in the ring
 		this.addToRing(extNode)
 	}
-	fmt.Println("\nNODE ID: ", hex.EncodeToString(this.node.nodeId))
-	fmt.Println("SUCCESSOR: ", hex.EncodeToString(this.node.finger[0].node.nodeId))
-
-	fmt.Println("LOOKUP NODE ID: ", hex.EncodeToString(this.lookup(string(this.node.nodeId)).nodeId))
 }
 
 func main() {
@@ -123,15 +132,16 @@ func main() {
 		} else if os.Args[1] == "client" {
 			app.init("127.0.0.1", "13338")
 
-			go func() {
+			// run Join on the server
+			go app.join("127.0.0.1:13337")
+
+			for {
 				err := app.nodeUDP.ListenAndServe()
 				if err != nil {
 					fmt.Println("Error serving -", err.Error())
 					return
 				}
-			}()
-			// run Join on the server
-			app.join("127.0.0.1:13337")
+			}
 		}
 	}
 }
