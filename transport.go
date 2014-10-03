@@ -2,52 +2,28 @@ package main
 
 import (
 	"fmt"
-	"net"
-	"encoding/json"
 )
 
-type Msg struct {
-	Type 	string
-	Key		string
-	Src 	string
-	Dst 	string
+func (s *AddService) Join(args *AddArgs, reply *AddReply) {
+	fmt.Println("Received a Join message from ", args.Ip+args.Port)
+	reply.Id = s.app.node.nodeId
+	reply.Ip = s.app.node.ip
+	reply.Port = s.app.node.port
 }
 
-type Transport struct {
-	bindAddress string
+func (s *AddService) FindSuccessor(args *AddArgs, reply *AddReply) {
+	successor := s.app.findSuccessor(args.Id)
+	reply.Id = successor.nodeId
+	reply.Ip = successor.ip
+	reply.Port = successor.port
 }
 
-func (transport *Transport) listen() {
-	udpAddr, _ := net.ResolveUDPAddr("udp", transport.bindAddress)
-	conn, _ := net.ListenUDP("udp", udpAddr)
-	defer conn.Close()
-	dec := json.NewDecoder(conn)
-	for {
-		msg := Msg{}
-		dec.Decode(&msg)
-		// we got a message
-		// ...
-		fmt.Println("msg:",msg)
-	}
-} 
+func (s *AddService) FindPredecessor(args *AddArgs, reply *AddReply) {
+	s.app.findPredecessor(args.Id)
+}
 
-func (transport *Transport) send(msg *Msg) {
-	udpAddr, err := net.ResolveUDPAddr("udp", msg.Dst)
-
-	conn, err := net.DialUDP("udp", nil, udpAddr)
-	defer conn.Close()
-
-	bytes, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	_, err = conn.Write(bytes)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	
-	fmt.Println("Msg:",msg,"Sent:",string(bytes))
+func (s *AddService) GetSuccessor(args *AddArgs, reply *AddReply) {
+	reply.Id = s.app.node.finger[0].node.nodeId
+	reply.Ip = s.app.node.finger[0].node.ip
+	reply.Port = s.app.node.finger[0].node.port
 }

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/hex"
+	//"encoding/hex"
 	"fmt"
 	"math/big"
-	"math/rand"
+	//"math/rand"
 	//"strconv"
 	"sync"
 )
@@ -12,7 +12,7 @@ import (
 const num_bits int = 160
 
 type Finger struct {
-	node  *Node
+	node  *ExternalNode
 	start []byte
 }
 
@@ -21,7 +21,7 @@ type Node struct {
 	ip          string
 	port        string
 	finger      [num_bits]Finger
-	predecessor *Node
+	predecessor *ExternalNode
 	mutex       sync.Mutex
 }
 
@@ -41,57 +41,168 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 	x.SetString(*id, 16)
 	idBytes := x.Bytes()
 
+	externalNode := new(ExternalNode)
+	externalNode.nodeId = idBytes
+	externalNode.ip = ip
+	externalNode.port = port
+
 	newNode := new(Node)
 	newNode.nodeId = idBytes
 	newNode.ip = ip
 	newNode.port = port
-	newNode.predecessor = newNode
+	newNode.predecessor = externalNode
 
 	for i := 0; i < num_bits; i++ {
 		_, start := calcFinger(idBytes, i+1, num_bits)
 		newNode.finger[i].start = start
 	}
-	newNode.finger[0].node = newNode
+	newNode.finger[0].node = externalNode
 
 	return newNode
 }
 
 // this joins the network;
 // node is an arbitrary node in the network
-func (this *Node) addToRing(np *Node) {
-	this.mutex.Lock()
-	this.predecessor = nil
-	this.finger[0].node = np.findSuccessor(this.nodeId)
-	this.mutex.Unlock()
+//func (this *Node) addToRing(np *Node) {
+//	this.mutex.Lock()
+//	this.predecessor = nil
+//	this.finger[0].node = np.findSuccessor(this.nodeId)
+//	this.mutex.Unlock()
+//}
+
+func (this *App) addToRing(np *ExternalNode) {
+	this.node.mutex.Lock()
+	this.node.predecessor = nil
+
+	args := new(AddArgs)
+	args.Id = this.node.nodeId
+	args.Ip = this.node.ip
+	args.Port = this.node.port
+
+	reply := new(AddReply)
+
+	addr := np.ip + ":" + np.port
+
+	// call FindSuccessor on np, which is already in the ring
+	fmt.Println("Calling FindSuccessor on ", addr)
+	err := this.nodeUDP.CallUDP("FindSuccessor", addr, args, reply, 3)
+
+	if err != nil {
+		fmt.Print("Call error - ")
+		fmt.Println(err.Error())
+		return
+	}
+
+	if reply != nil {
+		extNode := new(ExternalNode)
+		extNode.nodeId = reply.Id
+		extNode.ip = reply.Ip
+		extNode.port = reply.Port
+
+		this.node.finger[0].node = extNode
+	}
+	this.node.mutex.Unlock()
 }
 
 // ask node n to find id's successor
-func (this *Node) findSuccessor(id []byte) *Node {
+//func (this *Node) findSuccessor(id []byte) *Node {
+//	np := this.findPredecessor(id)
+//	return np.finger[0].node
+//}
+
+func (this *App) findSuccessor(id []byte) *ExternalNode {
 	np := this.findPredecessor(id)
-	return np.finger[0].node
+
+	args := new(AddArgs)
+	reply := new(AddReply)
+
+	addr := np.ip + ":" + np.port
+
+	// call GetSuccessor on np
+	fmt.Println("Calling GetSuccessor on ", addr)
+	err := this.nodeUDP.CallUDP("GetSuccessor", addr, args, reply, 3)
+
+	if err != nil {
+		fmt.Print("Call error - ")
+		fmt.Println(err.Error())
+		return nil
+	}
+
+	if reply != nil {
+		// now we have the successor
+		successor := new(ExternalNode)
+		successor.nodeId = reply.Id
+		successor.ip = reply.Ip
+		successor.port = reply.Port
+		return successor
+	}
+	return nil
 }
 
 // ask node n to find id's predecessor
-func (this *Node) findPredecessor(id []byte) *Node {
-	np := this
+//func (this *Node) findPredecessor(id []byte) *Node {
+//	np := this
 
-	for between(np.nodeId, np.finger[0].node.nodeId, id) == false {
-		np = np.closestPrecedingFinger(id)
+//	for between(np.nodeId, np.finger[0].node.nodeId, id) == false {
+//		np = np.closestPrecedingFinger(id)
+//	}
+//	return np
+//}
+
+func (this *App) findPredecessor(id []byte) *ExternalNode {
+	if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
+		extNode := new(ExternalNode)
+		extNode.nodeId = this.node.nodeId
+		extNode.ip = this.node.ip
+		extNode.port = this.node.port
+		return extNode
+	} else {
+		np := this.node.closestPrecedingFinger(id)
+
+		args := new(AddArgs)
+		args.Id = id
+
+		reply := new(AddReply)
+
+		addr := np.ip + ":" + np.port
+
+		// call FindPredecessor on np
+		fmt.Println("Calling FindPredecessor on ", addr)
+		err := this.nodeUDP.CallUDP("FindPredecessor", addr, args, reply, 3)
+
+		if err != nil {
+			fmt.Print("Call error - ")
+			fmt.Println(err.Error())
+			return nil
+		}
+		return nil
 	}
-	return np
 }
 
 // return closest finger preceding id
-func (this *Node) closestPrecedingFinger(id []byte) *Node {
+func (this *Node) closestPrecedingFinger(id []byte) *ExternalNode {
 	for i := num_bits - 1; i >= 0; i-- {
 		if this.finger[i].node != nil && between3(this.nodeId, id, this.finger[i].node.nodeId) {
 			return this.finger[i].node
 		}
 	}
-	return this
+
+	extNode := new(ExternalNode)
+	extNode.nodeId = this.nodeId
+	extNode.ip = this.ip
+	extNode.port = this.port
+	return extNode
 }
 
-func (this *Node) lookup(key string) *Node {
+//func (this *Node) lookup(key string) *Node {
+//	id := big.Int{}
+//	id.SetString(key, 16)
+//	idBytes := id.Bytes()
+
+//	return this.findSuccessor(idBytes)
+//}
+
+func (this *App) lookup(key string) *ExternalNode {
 	id := big.Int{}
 	id.SetString(key, 16)
 	idBytes := id.Bytes()
@@ -101,54 +212,54 @@ func (this *Node) lookup(key string) *Node {
 
 // periodically verify n’s immediate successor,
 // and tell the successor about n.
-func (this *Node) stabilize() {
-	this.mutex.Lock()
-	x := this.finger[0].node.predecessor
-	if x != nil && between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
-		this.finger[0].node = x
-	}
-	this.finger[0].node.notify(this)
-	this.mutex.Unlock()
-}
+//func (this *Node) stabilize() {
+//	this.mutex.Lock()
+//	x := this.finger[0].node.predecessor
+//	if x != nil && between3(this.nodeId, this.finger[0].node.nodeId, x.nodeId) {
+//		this.finger[0].node = x
+//	}
+//	this.finger[0].node.notify(this)
+//	this.mutex.Unlock()
+//}
 
 // np thinks it might be our predecessor.
-func (this *Node) notify(np *Node) {
-	if this.predecessor == nil || between3(this.predecessor.nodeId, this.nodeId, np.nodeId) {
-		this.predecessor = np
-	}
-}
+//func (this *Node) notify(np *Node) {
+//	if this.predecessor == nil || between3(this.predecessor.nodeId, this.nodeId, np.nodeId) {
+//		this.predecessor = np
+//	}
+//}
 
-func (this *Node) fixFingers() {
-	this.mutex.Lock()
-	i := rand.Intn(num_bits)
-	this.finger[i].node = this.findSuccessor(this.finger[i].start)
-	this.mutex.Unlock()
-}
+//func (this *Node) fixFingers() {
+//	this.mutex.Lock()
+//	i := rand.Intn(num_bits)
+//	this.finger[i].node = this.findSuccessor(this.finger[i].start)
+//	this.mutex.Unlock()
+//}
 
-func (this *Node) printRing() {
-	this.printNode()
+//func (this *Node) printRing() {
+//	this.printNode()
 
-	for i := this.finger[0].node; i != this; i = i.finger[0].node {
-		i.printNode()
-	}
-}
+//	for i := this.finger[0].node; i != this; i = i.finger[0].node {
+//		i.printNode()
+//	}
+//}
 
-func (this *Node) printNode() {
-	fmt.Println("Node "+":", hex.EncodeToString(this.nodeId))
-	if this.finger[0].node != nil {
-		fmt.Println("Successor "+":", hex.EncodeToString(this.finger[0].node.nodeId))
-	}
-	if this.predecessor != nil {
-		fmt.Println("Predecessors"+":", hex.EncodeToString(this.predecessor.nodeId))
-	}
-	//fmt.Println("Fingers")
-	//for i := 0; i < num_bits; i++ {
-	//	if this.finger[i].node != nil {
-	//		fmt.Println(strconv.Itoa(i)+" "+"Start:", hex.EncodeToString(this.finger[i].start), "Id:", hex.EncodeToString(this.finger[i].node.nodeId))
-	//	}
-	//}
-	fmt.Println("")
-}
+//func (this *Node) printNode() {
+//	fmt.Println("Node "+":", hex.EncodeToString(this.nodeId))
+//	if this.finger[0].node != nil {
+//		fmt.Println("Successor "+":", hex.EncodeToString(this.finger[0].node.nodeId))
+//	}
+//	if this.predecessor != nil {
+//		fmt.Println("Predecessors"+":", hex.EncodeToString(this.predecessor.nodeId))
+//	}
+//	//fmt.Println("Fingers")
+//	//for i := 0; i < num_bits; i++ {
+//	//	if this.finger[i].node != nil {
+//	//		fmt.Println(strconv.Itoa(i)+" "+"Start:", hex.EncodeToString(this.finger[i].start), "Id:", hex.EncodeToString(this.finger[i].node.nodeId))
+//	//	}
+//	//}
+//	fmt.Println("")
+//}
 
 /*
  * Example of expected output.
@@ -165,52 +276,52 @@ func (this *Node) printNode() {
  * successor    779d240121ed6d5e8bd0cb6529b08e5c617b5e72
  * distance     0
  */
-func (this *Node) testCalcFingers(k int, m int) {
-	fmt.Println("calulcating result = (n+2^(k-1)) mod (2^m)")
+//func (this *Node) testCalcFingers(k int, m int) {
+//	fmt.Println("calulcating result = (n+2^(k-1)) mod (2^m)")
 
-	// convert the n to a bigint
-	nBigInt := big.Int{}
-	nBigInt.SetBytes(this.nodeId)
-	//fmt.Printf("n            %s\n", nBigInt.String())
-	fmt.Printf("n            %s\n", hex.EncodeToString(this.nodeId))
+//	// convert the n to a bigint
+//	nBigInt := big.Int{}
+//	nBigInt.SetBytes(this.nodeId)
+//	//fmt.Printf("n            %s\n", nBigInt.String())
+//	fmt.Printf("n            %s\n", hex.EncodeToString(this.nodeId))
 
-	fmt.Printf("k            %d\n", k)
+//	fmt.Printf("k            %d\n", k)
 
-	fmt.Printf("m            %d\n", m)
+//	fmt.Printf("m            %d\n", m)
 
-	// get the right addend, i.e. 2^(k-1)
-	two := big.NewInt(2)
-	addend := big.Int{}
-	addend.Exp(two, big.NewInt(int64(k-1)), nil)
+//	// get the right addend, i.e. 2^(k-1)
+//	two := big.NewInt(2)
+//	addend := big.Int{}
+//	addend.Exp(two, big.NewInt(int64(k-1)), nil)
 
-	fmt.Printf("2^(k-1)      %s\n", addend.String())
+//	fmt.Printf("2^(k-1)      %s\n", addend.String())
 
-	// calculate sum
-	sum := big.Int{}
-	sum.Add(&nBigInt, &addend)
+//	// calculate sum
+//	sum := big.Int{}
+//	sum.Add(&nBigInt, &addend)
 
-	fmt.Printf("(n+2^(k-1))  %s\n", sum.String())
+//	fmt.Printf("(n+2^(k-1))  %s\n", sum.String())
 
-	// calculate 2^m
-	ceil := big.Int{}
-	ceil.Exp(two, big.NewInt(int64(m)), nil)
+//	// calculate 2^m
+//	ceil := big.Int{}
+//	ceil.Exp(two, big.NewInt(int64(m)), nil)
 
-	fmt.Printf("2^m          %s\n", ceil.String())
+//	fmt.Printf("2^m          %s\n", ceil.String())
 
-	// apply the mod
-	result := big.Int{}
-	result.Mod(&sum, &ceil)
+//	// apply the mod
+//	result := big.Int{}
+//	result.Mod(&sum, &ceil)
 
-	fmt.Printf("finger       %s\n", result.String())
+//	fmt.Printf("finger       %s\n", result.String())
 
-	resultBytes := result.Bytes()
-	resultHex := fmt.Sprintf("%x", resultBytes)
+//	resultBytes := result.Bytes()
+//	resultHex := fmt.Sprintf("%x", resultBytes)
 
-	fmt.Printf("finger (hex) %s\n", resultHex)
+//	fmt.Printf("finger (hex) %s\n", resultHex)
 
-	fmt.Println("successor   ", hex.EncodeToString(this.findSuccessor(resultBytes).nodeId))
+//	fmt.Println("successor   ", hex.EncodeToString(this.findSuccessor(resultBytes).nodeId))
 
-	dist := distance(this.nodeId, resultBytes, num_bits)
+//	dist := distance(this.nodeId, resultBytes, num_bits)
 
-	fmt.Println("distance     " + dist.String())
-}
+//	fmt.Println("distance     " + dist.String())
+//}
