@@ -22,8 +22,9 @@ type AddService struct {
 }
 
 type AddArgs struct {
-	Id       []byte
-	Ip, Port string
+	Id         []byte
+	Ip, Port   string
+	Key, Value string
 }
 type AddReply struct {
 	Id       []byte
@@ -71,6 +72,11 @@ func (this *App) init(bindAddr, bindPort string) {
 	node.Register(notify)
 	fmt.Println("Notify service registered")
 
+	insertkey := new(AddService)
+	insertkey.app = this
+	node.Register(insertkey)
+	fmt.Println("InsertKey service registered")
+
 	fmt.Println("")
 
 	// call stabilize and fixFingers periodically
@@ -87,6 +93,12 @@ func (this *App) init(bindAddr, bindPort string) {
 				fmt.Println("Predecessor: ", hex.EncodeToString(this.node.predecessor.nodeId))
 			}
 
+			fmt.Println("Keys: ")
+			for x := range this.node.keys {
+				fmt.Println(x)
+			}
+			fmt.Println("")
+
 			//// check what the 80th finger is
 			//if this.node.finger[79].node != nil {
 			//	fmt.Println("80th finger: ", hex.EncodeToString(this.node.finger[79].node.nodeId))
@@ -102,14 +114,13 @@ func (this *App) init(bindAddr, bindPort string) {
 			//	fmt.Println("160th finger: ", hex.EncodeToString(this.node.finger[159].node.nodeId))
 			//}
 
-			fmt.Println("")
+			//fmt.Println("")
 		}
 	}()
 }
 
 //Tries to join the node at the specified address.
 func (this *App) join(addr string) {
-
 	args := new(AddArgs)
 	args.Id = this.node.nodeId
 	args.Ip = this.node.ip
@@ -244,15 +255,14 @@ func (this *App) lookup(key string) *ExternalNode {
 }
 
 func (this *App) stabilize() {
+
 	if this.node.finger[0].node != nil {
 		this.node.mutex.Lock()
 		defer this.node.mutex.Unlock()
-
 		args := new(AddArgs)
 		reply := new(AddReply)
 
 		addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
-
 		// call GetPredecessor on this.node's successor
 		err := this.nodeUDP.CallUDP("GetPredecessor", addr, args, reply, time_out)
 
@@ -261,24 +271,20 @@ func (this *App) stabilize() {
 			fmt.Println(err.Error())
 			return
 		}
-
 		if reply != nil {
 			// now we have the predecessor
 			predecessor := new(ExternalNode)
 			predecessor.nodeId = reply.Id
 			predecessor.ip = reply.Ip
 			predecessor.port = reply.Port
-
 			if predecessor != nil && between3(this.node.nodeId, this.node.finger[0].node.nodeId, predecessor.nodeId) {
 				this.node.finger[0].node = predecessor
 			}
-
 			addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
 
 			args.Id = this.node.nodeId
 			args.Ip = this.node.ip
 			args.Port = this.node.port
-
 			err := this.nodeUDP.CallUDP("Notify", addr, args, reply, time_out)
 			if err != nil {
 				fmt.Print("Call error - ")
@@ -297,4 +303,14 @@ func (this *App) fixFingers() {
 	i := rand.Intn(num_bits)
 	successor := this.findSuccessor(this.node.finger[i].start)
 	this.node.finger[i].node = successor
+}
+
+func (this *App) listen() {
+	for {
+		err := this.nodeUDP.ListenAndServe()
+		if err != nil {
+			fmt.Println("Error serving -", err.Error())
+			return
+		}
+	}
 }

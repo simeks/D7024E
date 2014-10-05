@@ -23,6 +23,7 @@ type Node struct {
 	finger      [num_bits]Finger
 	predecessor *ExternalNode
 	mutex       sync.Mutex
+	keys        map[string]string
 }
 
 type ExternalNode struct {
@@ -57,6 +58,8 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 		newNode.finger[i].start = start
 	}
 	newNode.finger[0].node = externalNode
+
+	newNode.keys = make(map[string]string)
 
 	return newNode
 }

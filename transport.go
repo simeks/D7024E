@@ -51,3 +51,10 @@ func (s *AddService) Notify(args *AddArgs, reply *AddReply) {
 	extNode.port = args.Port
 	s.app.node.notify(extNode)
 }
+
+func (s *AddService) InsertKey(args *AddArgs, reply *AddReply) {
+	s.app.node.mutex.Lock()
+	defer s.app.node.mutex.Unlock()
+
+	s.app.node.keys[args.Key] = args.Value
+}
