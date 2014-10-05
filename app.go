@@ -140,8 +140,9 @@ func (this *App) join(addr string) {
 
 func (this *App) addToRing(np *ExternalNode) {
 	this.node.mutex.Lock()
+	defer this.node.mutex.Unlock()
+
 	this.node.predecessor = nil
-	this.node.mutex.Unlock()
 
 	args := new(AddArgs)
 	args.Id = this.node.nodeId
@@ -167,9 +168,7 @@ func (this *App) addToRing(np *ExternalNode) {
 		extNode.ip = reply.Ip
 		extNode.port = reply.Port
 
-		this.node.mutex.Lock()
 		this.node.finger[0].node = extNode
-		this.node.mutex.Unlock()
 	}
 }
 
@@ -200,10 +199,15 @@ func (this *App) findSuccessor(id []byte) *ExternalNode {
 			return successor
 		}
 	}
-	return nil
+	extNode := new(ExternalNode)
+	extNode.nodeId = this.node.nodeId
+	extNode.ip = this.node.ip
+	extNode.port = this.node.port
+	return extNode
 }
 
 func (this *App) findPredecessor(id []byte) *ExternalNode {
+
 	if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
 		extNode := new(ExternalNode)
 		extNode.nodeId = this.node.nodeId
@@ -212,7 +216,6 @@ func (this *App) findPredecessor(id []byte) *ExternalNode {
 		return extNode
 	} else {
 		np := this.node.closestPrecedingFinger(id)
-
 		args := new(AddArgs)
 		args.Id = id
 
@@ -241,52 +244,57 @@ func (this *App) lookup(key string) *ExternalNode {
 }
 
 func (this *App) stabilize() {
-	args := new(AddArgs)
-	reply := new(AddReply)
+	if this.node.finger[0].node != nil {
+		this.node.mutex.Lock()
+		defer this.node.mutex.Unlock()
 
-	addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
-
-	// call GetPredecessor on this.node's successor
-	err := this.nodeUDP.CallUDP("GetPredecessor", addr, args, reply, time_out)
-
-	if err != nil {
-		fmt.Print("Call error - ")
-		fmt.Println(err.Error())
-		return
-	}
-
-	if reply != nil {
-		// now we have the predecessor
-		predecessor := new(ExternalNode)
-		predecessor.nodeId = reply.Id
-		predecessor.ip = reply.Ip
-		predecessor.port = reply.Port
-
-		if predecessor != nil && between3(this.node.nodeId, this.node.finger[0].node.nodeId, predecessor.nodeId) {
-			this.node.mutex.Lock()
-			this.node.finger[0].node = predecessor
-			this.node.mutex.Unlock()
-		}
+		args := new(AddArgs)
+		reply := new(AddReply)
 
 		addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
 
-		args.Id = this.node.nodeId
-		args.Ip = this.node.ip
-		args.Port = this.node.port
+		// call GetPredecessor on this.node's successor
+		err := this.nodeUDP.CallUDP("GetPredecessor", addr, args, reply, time_out)
 
-		err := this.nodeUDP.CallUDP("Notify", addr, args, reply, time_out)
 		if err != nil {
 			fmt.Print("Call error - ")
 			fmt.Println(err.Error())
 			return
 		}
+
+		if reply != nil {
+			// now we have the predecessor
+			predecessor := new(ExternalNode)
+			predecessor.nodeId = reply.Id
+			predecessor.ip = reply.Ip
+			predecessor.port = reply.Port
+
+			if predecessor != nil && between3(this.node.nodeId, this.node.finger[0].node.nodeId, predecessor.nodeId) {
+				this.node.finger[0].node = predecessor
+			}
+
+			addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
+
+			args.Id = this.node.nodeId
+			args.Ip = this.node.ip
+			args.Port = this.node.port
+
+			err := this.nodeUDP.CallUDP("Notify", addr, args, reply, time_out)
+			if err != nil {
+				fmt.Print("Call error - ")
+				fmt.Println(err.Error())
+				return
+			}
+		}
 	}
+	return
 }
 
 func (this *App) fixFingers() {
+	this.node.mutex.Lock()
+	defer this.node.mutex.Unlock()
+
 	i := rand.Intn(num_bits)
 	successor := this.findSuccessor(this.node.finger[i].start)
-	this.node.mutex.Lock()
 	this.node.finger[i].node = successor
-	this.node.mutex.Unlock()
 }

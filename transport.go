@@ -23,7 +23,7 @@ func (s *AddService) FindSuccessor(args *AddArgs, reply *AddReply) {
 
 func (s *AddService) FindPredecessor(args *AddArgs, reply *AddReply) {
 	predecessor := s.app.findPredecessor(args.Id)
-	if args.Id != nil && predecessor != nil {
+	if predecessor != nil {
 		reply.Id = predecessor.nodeId
 		reply.Ip = predecessor.ip
 		reply.Port = predecessor.port
