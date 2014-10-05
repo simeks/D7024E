@@ -58,3 +58,7 @@ func (s *AddService) InsertKey(args *AddArgs, reply *AddReply) {
 
 	s.app.node.keys[args.Key] = args.Value
 }
+
+func (s *AddService) Ping(args *AddArgs, reply *AddReply) {
+	
+}

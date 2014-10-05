@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/rand"
 	"time"
+	"strconv"
 )
 
 // 0 = no time out
@@ -77,6 +78,11 @@ func (this *App) init(bindAddr, bindPort string) {
 	node.Register(insertkey)
 	fmt.Println("InsertKey service registered")
 
+	ping := new(AddService)
+	ping.app = this
+	node.Register(ping)
+	fmt.Println("Ping service registered")
+
 	fmt.Println("")
 
 	// call stabilize and fixFingers periodically
@@ -115,6 +121,17 @@ func (this *App) init(bindAddr, bindPort string) {
 			//}
 
 			//fmt.Println("")
+		}
+	}()
+
+	// Ping nodes periodically
+	go func() {
+		c := time.Tick(5 * time.Second)
+		for {
+			select {
+				case <- c:
+					this.sendPing()
+			}
 		}
 	}()
 }
@@ -311,6 +328,33 @@ func (this *App) listen() {
 		if err != nil {
 			fmt.Println("Error serving -", err.Error())
 			return
+		}
+	}
+}
+
+func (this *App) sendPing() {
+	args := new(AddArgs)
+	reply := new(AddReply)
+	args.Id = this.node.nodeId
+
+	if this.node.predecessor != nil {
+		err := this.nodeUDP.CallUDP("Ping", this.node.predecessor.ip+":"+this.node.predecessor.port, args, reply, 3)
+		if err != nil {
+			// Predecessor has timed out
+			fmt.Println("Predecessor has timed out")
+			this.node.predecessor = nil
+		}
+	}
+
+	for i := 0; i < num_bits; i++ {
+		finger := this.node.finger[i].node
+		if finger != nil {
+			err := this.nodeUDP.CallUDP("Ping", finger.ip+":"+finger.port, args, reply, 3)
+			if err != nil {
+				// Finger[i] has timed out
+				fmt.Println("finger["+strconv.Itoa(i)+"] has timed out")
+				this.node.finger[i].node = nil
+			}
 		}
 	}
 }
