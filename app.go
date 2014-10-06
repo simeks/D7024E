@@ -6,8 +6,8 @@ import (
 	"github.com/liamzebedee/go-qrp"
 	"math/big"
 	"math/rand"
-	"time"
 	"strconv"
+	"time"
 )
 
 // 0 = no time out
@@ -28,8 +28,10 @@ type AddArgs struct {
 	Key, Value string
 }
 type AddReply struct {
-	Id       []byte
-	Ip, Port string
+	Id                     []byte
+	Ip, Port               string
+	Value                  string
+	WasDeleted, WasUpdated int
 }
 
 func (this *App) init(bindAddr, bindPort string) {
@@ -77,6 +79,21 @@ func (this *App) init(bindAddr, bindPort string) {
 	insertkey.app = this
 	node.Register(insertkey)
 	fmt.Println("InsertKey service registered")
+
+	deletekey := new(AddService)
+	deletekey.app = this
+	node.Register(deletekey)
+	fmt.Println("DeleteKey service registered")
+
+	getkey := new(AddService)
+	getkey.app = this
+	node.Register(getkey)
+	fmt.Println("GetKey service registered")
+
+	updatekey := new(AddService)
+	updatekey.app = this
+	node.Register(updatekey)
+	fmt.Println("UpdateKey service registered")
 
 	ping := new(AddService)
 	ping.app = this
@@ -129,8 +146,8 @@ func (this *App) init(bindAddr, bindPort string) {
 		c := time.Tick(5 * time.Second)
 		for {
 			select {
-				case <- c:
-					this.sendPing()
+			case <-c:
+				this.sendPing()
 			}
 		}
 	}()
@@ -352,7 +369,7 @@ func (this *App) sendPing() {
 			err := this.nodeUDP.CallUDP("Ping", finger.ip+":"+finger.port, args, reply, 3)
 			if err != nil {
 				// Finger[i] has timed out
-				fmt.Println("finger["+strconv.Itoa(i)+"] has timed out")
+				fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
 				this.node.finger[i].node = nil
 			}
 		}

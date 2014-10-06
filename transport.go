@@ -59,6 +59,36 @@ func (s *AddService) InsertKey(args *AddArgs, reply *AddReply) {
 	s.app.node.keys[args.Key] = args.Value
 }
 
+func (s *AddService) DeleteKey(args *AddArgs, reply *AddReply) {
+	_, ok := s.app.node.keys[args.Key]
+	if ok {
+		s.app.node.mutex.Lock()
+		defer s.app.node.mutex.Unlock()
+
+		delete(s.app.node.keys, args.Key)
+		reply.WasDeleted = 1
+	} else {
+		reply.WasDeleted = 0
+	}
+}
+
+func (s *AddService) GetKey(args *AddArgs, reply *AddReply) {
+	_, ok := s.app.node.keys[args.Key]
+	if ok {
+		reply.Value = s.app.node.keys[args.Key]
+	}
+}
+
+func (s *AddService) UpdateKey(args *AddArgs, reply *AddReply) {
+	_, ok := s.app.node.keys[args.Key]
+	if ok {
+		s.app.node.keys[args.Key] = args.Value
+		reply.WasUpdated = 1
+	} else {
+		reply.WasUpdated = 0
+	}
+}
+
 func (s *AddService) Ping(args *AddArgs, reply *AddReply) {
-	
+
 }

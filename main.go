@@ -28,8 +28,17 @@ func main() {
 
 	go func() {
 		http.HandleFunc("/chord/", chordHandler)
-		http.HandleFunc("/inserted/", func(w http.ResponseWriter, r *http.Request) {
-			insertedHandler(w, r, &app)
+		http.HandleFunc("/post/", func(w http.ResponseWriter, r *http.Request) {
+			postHandler(w, r, &app)
+		})
+		http.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
+			deleteHandler(w, r, &app)
+		})
+		http.HandleFunc("/get/", func(w http.ResponseWriter, r *http.Request) {
+			getHandler(w, r, &app)
+		})
+		http.HandleFunc("/put/", func(w http.ResponseWriter, r *http.Request) {
+			putHandler(w, r, &app)
 		})
 		http.ListenAndServe(":"+port, nil)
 	}()
