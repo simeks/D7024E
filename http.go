@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	//"bytes"
 	"fmt"
 	"net/http"
 )
@@ -36,7 +36,7 @@ func chordHandler(w http.ResponseWriter, r *http.Request) {
 		"<input type=\"submit\" value=\"Submit\">"+
 		"</form>")
 }
-
+/*
 func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	value := r.FormValue("insertvalue")
 	key := r.FormValue("insertkey")
@@ -196,3 +196,4 @@ func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
 		}
 	}
 }
+*/
