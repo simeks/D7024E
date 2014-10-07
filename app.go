@@ -20,7 +20,7 @@ type App struct {
 
 func (this *App) init(bindAddr, bindPort string) {
 	this.node = makeDHTNode(nil, bindAddr, bindPort)
-	this.transport.bindAddress = bindAddr+":"+bindPort
+	this.transport.init(bindAddr+":"+bindPort)
 
 	// call stabilize and fixFingers periodically
 	go func() {
@@ -89,9 +89,12 @@ func (this *App) join(addr string) {
 		return
 	}
 
-	this.transport.sendMsg(addr, "asd", bytes)
-	this.transport.sendMsg(addr, "asd2", bytes)
-	this.transport.sendMsg(addr, "asd3", bytes)
+	reply := this.transport.sendRequest(addr, "asd", bytes)
+	if reply != nil {
+		fmt.Println("Returned: Successful")
+	} else {
+		fmt.Println("Returned: Failed")
+	}
 
 	/*
 	args := new(AddArgs)
@@ -307,6 +310,7 @@ func (this *App) listen() {
 
 			case req := <- reqChan:
 				fmt.Println("Req:",req.Id)
+				this.transport.sendReply(req.SN, []byte{})
 
 		}
 	}

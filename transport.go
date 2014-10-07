@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"encoding/gob"
+	"time"
 )
 
 type Msg struct {
@@ -22,16 +23,35 @@ type Reply struct {
 	Data []byte
 }
 
-
 type Packet struct {
+	Src string
+
 	Msg *Msg
 	Request *Request
 	Reply *Reply
 }
 
+type PendingRequest struct {
+	sn int
+	channel chan Reply
+}
+type RecvRequest struct {
+	src string
+}
+
 type Transport struct {
 	bindAddress string
 	lastReqSN int
+
+	sentRequests map[int]*PendingRequest
+	recvRequests map[int]*RecvRequest
+}
+
+func (transport *Transport) init(bindAddr string) {
+	transport.bindAddress = bindAddr
+	transport.lastReqSN = 0
+	transport.sentRequests = make(map[int]*PendingRequest)
+	transport.recvRequests = make(map[int]*RecvRequest)
 }
 
 func (transport *Transport) listen(msgChan chan Msg, reqChan chan Request) {
@@ -45,15 +65,24 @@ func (transport *Transport) listen(msgChan chan Msg, reqChan chan Request) {
 
 		if packet.Msg != nil {
 			msgChan <- *packet.Msg
-
 		} else if packet.Request != nil {
+			recvReq := RecvRequest{packet.Src}
+			transport.recvRequests[packet.Request.SN] = &recvReq
 
+			reqChan <- *packet.Request
 		} else if packet.Reply != nil {
-
+			transport.processReply(packet.Reply)
 		}
 
 	}
 } 
+
+func (transport *Transport) processReply(reply *Reply) {
+	pr := transport.sentRequests[reply.SN]
+	pr.channel <- *reply
+
+	delete(transport.sentRequests, reply.SN)
+}
 
 func (transport *Transport) sendPacket(dst string, packet Packet) {
 	udpAddr, err := net.ResolveUDPAddr("udp", dst)
@@ -71,17 +100,32 @@ func (transport *Transport) sendPacket(dst string, packet Packet) {
 }
 
 func (transport *Transport) sendMsg(dst, msgId string, data []byte) {
-	packet := Packet{&Msg{msgId, data}, nil, nil}
+	packet := Packet{transport.bindAddress, &Msg{msgId, data}, nil, nil}
 	transport.sendPacket(dst, packet)
 }
 
-func (transport *Transport) sendRequest(dst, msgId string, data []byte) Reply {
-	packet := Packet{nil, &Request{transport.lastReqId, msgId, data}, nil}
+// Blocks until either a reply is retrieved or the request times out
+func (transport *Transport) sendRequest(dst, msgId string, data []byte) *Reply {
+	packet := Packet{transport.bindAddress, nil, &Request{transport.lastReqSN, msgId, data}, nil}
 	transport.sendPacket(dst, packet)
-	transport.lastReqId++
+
+	pr := PendingRequest{transport.lastReqSN, make(chan Reply)}
+	transport.sentRequests[transport.lastReqSN] = &pr
+	transport.lastReqSN++
+
+	timeout := time.NewTimer(time.Second * 3)
+	select {
+		case <- timeout.C:
+			return nil
+		case reply := <- pr.channel:
+			return &reply
+	}
 }
 
-func (transport *Transport) sendReply(dst, msgId string, data []byte) {
-	packet := Packet{nil, nil, &Reply{0, msgId, data}}
-	transport.sendPacket(dst, packet)
+func (transport *Transport) sendReply(sn int, data []byte) {
+	rr := transport.recvRequests[sn]
+	delete(transport.recvRequests, sn)
+
+	packet := Packet{transport.bindAddress, nil, nil, &Reply{sn, data}}
+	transport.sendPacket(rr.src, packet)
 }
