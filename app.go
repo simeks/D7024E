@@ -15,12 +15,17 @@ const time_out int = 3
 type App struct {
 	node    *Node
 	transport Transport
+	net Net
 
+	keyValue map[string]string
 }
 
 func (this *App) init(bindAddr, bindPort string) {
+	this.keyValue = make(map[string]string)
+
 	this.node = makeDHTNode(nil, bindAddr, bindPort)
 	this.transport.init(bindAddr+":"+bindPort)
+	this.net = Net{this}
 
 	// call stabilize and fixFingers periodically
 	go func() {
@@ -38,7 +43,7 @@ func (this *App) init(bindAddr, bindPort string) {
 				}
 
 				//fmt.Println("Keys: ")
-				for x := range this.node.keys {
+				for x := range this.keyValue {
 					fmt.Println(x)
 				}
 				//fmt.Println("")
@@ -299,22 +304,49 @@ func (this *App) listen() {
 	for {
 		select {
 			case msg := <- msgChan:
-				fmt.Println("Msg:",msg.Id)
-
-				msga := MsgA{}
-				err := json.Unmarshal(msg.Data, &msga)
-				if err != nil {
-					fmt.Println("Error:",err)
+				switch msg.Id {
+				case "notify":
+					this.net.notify(msg)
+					break
+				case "insertKey":
+					this.net.insertKey(msg)
+					break
 				}
-				fmt.Println("msg",msga.Stuff)
-
 			case req := <- reqChan:
-				fmt.Println("Req:",req.Id)
-				this.transport.sendReply(req.SN, []byte{})
+				switch req.Id {
+				case "join":
+					this.net.join(req)
+					break
+				case "findSuccessor":
+					this.net.findSuccessor(req)
+					break
+				case "findPredecessor":
+					this.net.findPredecessor(req)
+					break
+				case "getSuccessor":
+					this.net.getSuccessor(req)
+					break
+				case "getPredecessor":
+					this.net.getPredecessor(req)
+					break
+				case "getKey":
+					this.net.getKey(req)
+					break
+				case "deleteKey":
+					this.net.deleteKey(req)
+					break
+				case "updateKey":
+					this.net.updateKey(req)
+					break
+				case "ping":
+					this.net.ping(req)
+					break
+				}				
 
 		}
 	}
 }
+
 
 func (this *App) sendPing() {
 	/*

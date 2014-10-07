@@ -84,12 +84,12 @@ func (t *Transport) listen(msgChan chan Msg, reqChan chan Request) {
 
 func (t *Transport) processReply(reply *Reply) {
 	t.lock.Lock()
+	defer t.lock.Unlock()
 
 	pr := t.sentRequests[reply.SN]
 	pr.channel <- *reply
 
 	delete(t.sentRequests, reply.SN)
-	t.lock.Unlock()
 }
 
 func (t *Transport) sendPacket(dst string, packet Packet) {
