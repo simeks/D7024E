@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/hex"
+	//"encoding/hex"
 	"fmt"
-	"github.com/liamzebedee/go-qrp"
 	"math/big"
-	"math/rand"
-	"strconv"
+	//"math/rand"
 	"time"
+	"encoding/json"
 )
 
 // 0 = no time out
@@ -15,129 +14,52 @@ const time_out int = 3
 
 type App struct {
 	node    *Node
-	nodeUDP *qrp.Node
-}
+	transport Transport
 
-type AddService struct {
-	app *App
-}
-
-type AddArgs struct {
-	Id         []byte
-	Ip, Port   string
-	Key, Value string
-}
-type AddReply struct {
-	Id                     []byte
-	Ip, Port               string
-	Value                  string
-	WasDeleted, WasUpdated int
 }
 
 func (this *App) init(bindAddr, bindPort string) {
 	this.node = makeDHTNode(nil, bindAddr, bindPort)
-
-	node, err := qrp.CreateNodeUDP("udp", bindAddr+":"+bindPort, 512)
-	if err != nil {
-		fmt.Print("ERROR: Can't create node -", err.Error())
-		return
-	}
-	this.nodeUDP = node
-	fmt.Println("\n" + bindAddr + ":" + bindPort + ": Node " + hex.EncodeToString(this.node.nodeId) + " created\n")
-
-	join := new(AddService)
-	join.app = this
-	node.Register(join)
-	fmt.Println("Join service registered")
-
-	findsuccessor := new(AddService)
-	findsuccessor.app = this
-	node.Register(findsuccessor)
-	fmt.Println("FindSuccessor service registered")
-
-	findpredecessor := new(AddService)
-	findpredecessor.app = this
-	node.Register(findpredecessor)
-	fmt.Println("FindPredecessor service registered")
-
-	getsuccessor := new(AddService)
-	getsuccessor.app = this
-	node.Register(getsuccessor)
-	fmt.Println("GetSuccessor service registered")
-
-	getpredecessor := new(AddService)
-	getpredecessor.app = this
-	node.Register(getpredecessor)
-	fmt.Println("GetPredecessor service registered")
-
-	notify := new(AddService)
-	notify.app = this
-	node.Register(notify)
-	fmt.Println("Notify service registered")
-
-	insertkey := new(AddService)
-	insertkey.app = this
-	node.Register(insertkey)
-	fmt.Println("InsertKey service registered")
-
-	deletekey := new(AddService)
-	deletekey.app = this
-	node.Register(deletekey)
-	fmt.Println("DeleteKey service registered")
-
-	getkey := new(AddService)
-	getkey.app = this
-	node.Register(getkey)
-	fmt.Println("GetKey service registered")
-
-	updatekey := new(AddService)
-	updatekey.app = this
-	node.Register(updatekey)
-	fmt.Println("UpdateKey service registered")
-
-	ping := new(AddService)
-	ping.app = this
-	node.Register(ping)
-	fmt.Println("Ping service registered")
-
-	fmt.Println("")
+	this.transport.bindAddress = bindAddr+":"+bindPort
 
 	// call stabilize and fixFingers periodically
 	go func() {
 		c := time.Tick(3 * time.Second)
-		for now := range c {
-			fmt.Println(now)
-			this.stabilize()
-			this.fixFingers()
+		for {
+			select {
+			case <-c:
+				this.stabilize()
+				this.fixFingers()
 
-			fmt.Println("Node: ", hex.EncodeToString(this.node.nodeId))
-			fmt.Println("Successor: ", hex.EncodeToString(this.node.finger[0].node.nodeId))
-			if this.node.predecessor != nil {
-				fmt.Println("Predecessor: ", hex.EncodeToString(this.node.predecessor.nodeId))
+				//fmt.Println("Node: ", hex.EncodeToString(this.node.nodeId))
+				//fmt.Println("Successor: ", hex.EncodeToString(this.node.finger[0].node.nodeId))
+				if this.node.predecessor != nil {
+				//	fmt.Println("Predecessor: ", hex.EncodeToString(this.node.predecessor.nodeId))
+				}
+
+				//fmt.Println("Keys: ")
+				for x := range this.node.keys {
+					fmt.Println(x)
+				}
+				//fmt.Println("")
+
+				//// check what the 80th finger is
+				//if this.node.finger[79].node != nil {
+				//	fmt.Println("80th finger: ", hex.EncodeToString(this.node.finger[79].node.nodeId))
+				//}
+
+				//// check what the 120th finger is
+				//if this.node.finger[119].node != nil {
+				//	fmt.Println("120th finger: ", hex.EncodeToString(this.node.finger[119].node.nodeId))
+				//}
+
+				//// check what the 160th finger is
+				//if this.node.finger[159].node != nil {
+				//	fmt.Println("160th finger: ", hex.EncodeToString(this.node.finger[159].node.nodeId))
+				//}
+
+				//fmt.Println("")
 			}
-
-			fmt.Println("Keys: ")
-			for x := range this.node.keys {
-				fmt.Println(x)
-			}
-			fmt.Println("")
-
-			//// check what the 80th finger is
-			//if this.node.finger[79].node != nil {
-			//	fmt.Println("80th finger: ", hex.EncodeToString(this.node.finger[79].node.nodeId))
-			//}
-
-			//// check what the 120th finger is
-			//if this.node.finger[119].node != nil {
-			//	fmt.Println("120th finger: ", hex.EncodeToString(this.node.finger[119].node.nodeId))
-			//}
-
-			//// check what the 160th finger is
-			//if this.node.finger[159].node != nil {
-			//	fmt.Println("160th finger: ", hex.EncodeToString(this.node.finger[159].node.nodeId))
-			//}
-
-			//fmt.Println("")
 		}
 	}()
 
@@ -153,8 +75,25 @@ func (this *App) init(bindAddr, bindPort string) {
 	}()
 }
 
+type MsgA struct {
+	Stuff string
+}
+
 //Tries to join the node at the specified address.
 func (this *App) join(addr string) {
+	msg := MsgA{}
+	msg.Stuff = "asd"
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	this.transport.sendMsg(addr, "asd", bytes)
+	this.transport.sendMsg(addr, "asd2", bytes)
+	this.transport.sendMsg(addr, "asd3", bytes)
+
+	/*
 	args := new(AddArgs)
 	args.Id = this.node.nodeId
 	args.Ip = this.node.ip
@@ -181,9 +120,11 @@ func (this *App) join(addr string) {
 		// extNode is already in the ring
 		this.addToRing(extNode)
 	}
+	*/
 }
 
 func (this *App) addToRing(np *ExternalNode) {
+	/*
 	this.node.mutex.Lock()
 	defer this.node.mutex.Unlock()
 
@@ -215,9 +156,11 @@ func (this *App) addToRing(np *ExternalNode) {
 
 		this.node.finger[0].node = extNode
 	}
+	*/
 }
 
 func (this *App) findSuccessor(id []byte) *ExternalNode {
+	/*
 	np := this.findPredecessor(id)
 
 	if np != nil {
@@ -249,10 +192,12 @@ func (this *App) findSuccessor(id []byte) *ExternalNode {
 	extNode.ip = this.node.ip
 	extNode.port = this.node.port
 	return extNode
+	*/
+	return nil
 }
 
 func (this *App) findPredecessor(id []byte) *ExternalNode {
-
+/*
 	if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
 		extNode := new(ExternalNode)
 		extNode.nodeId = this.node.nodeId
@@ -278,6 +223,8 @@ func (this *App) findPredecessor(id []byte) *ExternalNode {
 		}
 		return nil
 	}
+	*/
+	return nil
 }
 
 func (this *App) lookup(key string) *ExternalNode {
@@ -289,7 +236,7 @@ func (this *App) lookup(key string) *ExternalNode {
 }
 
 func (this *App) stabilize() {
-
+/*
 	if this.node.finger[0].node != nil {
 		this.node.mutex.Lock()
 		defer this.node.mutex.Unlock()
@@ -298,7 +245,7 @@ func (this *App) stabilize() {
 
 		addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
 		// call GetPredecessor on this.node's successor
-		err := this.nodeUDP.CallUDP("GetPredecessor", addr, args, reply, time_out)
+		//err := this.nodeUDP.CallUDP("GetPredecessor", addr, args, reply, time_out)
 
 		if err != nil {
 			fmt.Print("Call error - ")
@@ -316,62 +263,84 @@ func (this *App) stabilize() {
 			}
 			addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
 
-			args.Id = this.node.nodeId
-			args.Ip = this.node.ip
-			args.Port = this.node.port
-			err := this.nodeUDP.CallUDP("Notify", addr, args, reply, time_out)
-			if err != nil {
-				fmt.Print("Call error - ")
-				fmt.Println(err.Error())
-				return
-			}
+			//args.Id = this.node.nodeId
+			//args.Ip = this.node.ip
+			//args.Port = this.node.port
+			//err := this.nodeUDP.CallUDP("Notify", addr, args, reply, time_out)
+			//if err != nil {
+			//	fmt.Print("Call error - ")
+			//	fmt.Println(err.Error())
+			//	return
+			//}
 		}
 	}
-	return
+	*/
 }
 
 func (this *App) fixFingers() {
-	this.node.mutex.Lock()
+	/*this.node.mutex.Lock()
 	defer this.node.mutex.Unlock()
 
 	i := rand.Intn(num_bits)
 	successor := this.findSuccessor(this.node.finger[i].start)
 	this.node.finger[i].node = successor
+	*/
 }
 
 func (this *App) listen() {
+
+	msgChan := make(chan Msg)
+	reqChan := make(chan Request)
+	go this.transport.listen(msgChan, reqChan)
+
 	for {
-		err := this.nodeUDP.ListenAndServe()
-		if err != nil {
-			fmt.Println("Error serving -", err.Error())
-			return
+		select {
+			case msg := <- msgChan:
+				fmt.Println("Msg:",msg.Id)
+
+				msga := MsgA{}
+				err := json.Unmarshal(msg.Data, &msga)
+				if err != nil {
+					fmt.Println("Error:",err)
+				}
+				fmt.Println("msg",msga.Stuff)
+
+			case req := <- reqChan:
+				fmt.Println("Req:",req.Id)
+
 		}
 	}
 }
 
 func (this *App) sendPing() {
+	/*
 	args := new(AddArgs)
 	reply := new(AddReply)
 	args.Id = this.node.nodeId
 
 	if this.node.predecessor != nil {
-		err := this.nodeUDP.CallUDP("Ping", this.node.predecessor.ip+":"+this.node.predecessor.port, args, reply, 3)
-		if err != nil {
+
+		//err := this.nodeUDP.CallUDP("Ping", this.node.predecessor.ip+":"+this.node.predecessor.port, args, reply, 3)
+		
+		//if err != nil {
 			// Predecessor has timed out
-			fmt.Println("Predecessor has timed out")
-			this.node.predecessor = nil
-		}
+		//	fmt.Println("Predecessor has timed out")
+		//	this.node.predecessor = nil
+		//}
 	}
 
 	for i := 0; i < num_bits; i++ {
 		finger := this.node.finger[i].node
 		if finger != nil {
-			err := this.nodeUDP.CallUDP("Ping", finger.ip+":"+finger.port, args, reply, 3)
-			if err != nil {
+
+			//err := this.nodeUDP.CallUDP("Ping", finger.ip+":"+finger.port, args, reply, 3)
+
+			//if err != nil {
 				// Finger[i] has timed out
-				fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
-				this.node.finger[i].node = nil
-			}
+			//	fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
+			//	this.node.finger[i].node = nil
+			//}
 		}
 	}
+	*/
 }
