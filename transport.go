@@ -5,6 +5,7 @@ import (
 	"net"
 	"encoding/gob"
 	"time"
+	"sync"
 )
 
 type Msg struct {
@@ -45,17 +46,19 @@ type Transport struct {
 
 	sentRequests map[int]*PendingRequest
 	recvRequests map[int]*RecvRequest
+
+	lock sync.Mutex
 }
 
-func (transport *Transport) init(bindAddr string) {
-	transport.bindAddress = bindAddr
-	transport.lastReqSN = 0
-	transport.sentRequests = make(map[int]*PendingRequest)
-	transport.recvRequests = make(map[int]*RecvRequest)
+func (t *Transport) init(bindAddr string) {
+	t.bindAddress = bindAddr
+	t.lastReqSN = 0
+	t.sentRequests = make(map[int]*PendingRequest)
+	t.recvRequests = make(map[int]*RecvRequest)
 }
 
-func (transport *Transport) listen(msgChan chan Msg, reqChan chan Request) {
-	udpAddr, _ := net.ResolveUDPAddr("udp", transport.bindAddress)
+func (t *Transport) listen(msgChan chan Msg, reqChan chan Request) {
+	udpAddr, _ := net.ResolveUDPAddr("udp", t.bindAddress)
 	conn, _ := net.ListenUDP("udp", udpAddr)
 	defer conn.Close()
 	dec := gob.NewDecoder(conn)
@@ -66,25 +69,30 @@ func (transport *Transport) listen(msgChan chan Msg, reqChan chan Request) {
 		if packet.Msg != nil {
 			msgChan <- *packet.Msg
 		} else if packet.Request != nil {
+			t.lock.Lock()
 			recvReq := RecvRequest{packet.Src}
-			transport.recvRequests[packet.Request.SN] = &recvReq
+			t.recvRequests[packet.Request.SN] = &recvReq
+			t.lock.Unlock()
 
 			reqChan <- *packet.Request
 		} else if packet.Reply != nil {
-			transport.processReply(packet.Reply)
+			t.processReply(packet.Reply)
 		}
 
 	}
 } 
 
-func (transport *Transport) processReply(reply *Reply) {
-	pr := transport.sentRequests[reply.SN]
+func (t *Transport) processReply(reply *Reply) {
+	t.lock.Lock()
+
+	pr := t.sentRequests[reply.SN]
 	pr.channel <- *reply
 
-	delete(transport.sentRequests, reply.SN)
+	delete(t.sentRequests, reply.SN)
+	t.lock.Unlock()
 }
 
-func (transport *Transport) sendPacket(dst string, packet Packet) {
+func (t *Transport) sendPacket(dst string, packet Packet) {
 	udpAddr, err := net.ResolveUDPAddr("udp", dst)
 
 	conn, err := net.DialUDP("udp", nil, udpAddr)
@@ -96,22 +104,26 @@ func (transport *Transport) sendPacket(dst string, packet Packet) {
 	if err != nil {
 		fmt.Println(err)
 		return
-	}	
+	}
 }
 
-func (transport *Transport) sendMsg(dst, msgId string, data []byte) {
-	packet := Packet{transport.bindAddress, &Msg{msgId, data}, nil, nil}
-	transport.sendPacket(dst, packet)
+func (t *Transport) sendMsg(dst, msgId string, data []byte) {
+	packet := Packet{t.bindAddress, &Msg{msgId, data}, nil, nil}
+	t.sendPacket(dst, packet)
 }
 
 // Blocks until either a reply is retrieved or the request times out
-func (transport *Transport) sendRequest(dst, msgId string, data []byte) *Reply {
-	packet := Packet{transport.bindAddress, nil, &Request{transport.lastReqSN, msgId, data}, nil}
-	transport.sendPacket(dst, packet)
+func (t *Transport) sendRequest(dst, msgId string, data []byte) *Reply {
+	t.lock.Lock()
 
-	pr := PendingRequest{transport.lastReqSN, make(chan Reply)}
-	transport.sentRequests[transport.lastReqSN] = &pr
-	transport.lastReqSN++
+	packet := Packet{t.bindAddress, nil, &Request{t.lastReqSN, msgId, data}, nil}
+	pr := PendingRequest{t.lastReqSN, make(chan Reply)}
+	t.sentRequests[t.lastReqSN] = &pr
+	t.lastReqSN++
+
+	t.lock.Unlock()
+
+	t.sendPacket(dst, packet)
 
 	timeout := time.NewTimer(time.Second * 3)
 	select {
@@ -122,10 +134,12 @@ func (transport *Transport) sendRequest(dst, msgId string, data []byte) *Reply {
 	}
 }
 
-func (transport *Transport) sendReply(sn int, data []byte) {
-	rr := transport.recvRequests[sn]
-	delete(transport.recvRequests, sn)
+func (t *Transport) sendReply(sn int, data []byte) {
+	t.lock.Lock()
+	rr := t.recvRequests[sn]
+	delete(t.recvRequests, sn)
+	t.lock.Unlock()
 
-	packet := Packet{transport.bindAddress, nil, nil, &Reply{sn, data}}
-	transport.sendPacket(rr.src, packet)
+	packet := Packet{t.bindAddress, nil, nil, &Reply{sn, data}}
+	t.sendPacket(rr.src, packet)
 }
