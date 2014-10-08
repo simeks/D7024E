@@ -8,8 +8,7 @@ import (
 
 type NotifyMsg struct {
 	NodeId []byte
-	Ip     string
-	Port   string
+	Addr     string
 }
 
 // insertKey, updateKey
@@ -35,8 +34,7 @@ type UpdateValueReply struct {
 
 
 type JoinRequest struct {
-	Ip string
-	Port string
+	Addr string
 	Id []byte
 }
 
@@ -52,8 +50,7 @@ type FindNodeReq struct {
 // findSuccessor, findPredecessor, getSuccessor, getPredecessor
 type FindNodeReply struct {
 	Id []byte
-	Ip string
-	Port string
+	Addr string
 	Found bool
 }
 
@@ -62,15 +59,15 @@ type Net struct {
 }
 
 
-func (n *Net) notify(msg Msg) {
+func (n *Net) notify(msg *Msg) {
 	m := NotifyMsg{}
 	json.Unmarshal(msg.Data, &m)
 
-	node := ExternalNode{m.NodeId, m.Ip, m.Port}
+	node := ExternalNode{m.NodeId, m.Addr}
 	n.app.node.notify(&node)
 }
 
-func (n *Net) insertKey(msg Msg) {
+func (n *Net) insertKey(msg *Msg) {
 	m := KeyValueMsg{}
 	json.Unmarshal(msg.Data, &m)
 
@@ -78,9 +75,9 @@ func (n *Net) insertKey(msg Msg) {
 	
 }
 
-func (n *Net) getKey(req Request) {
+func (n *Net) getKey(rc *RequestContext) {
 	r := KeyMsg{}
-	json.Unmarshal(req.Data, &r)
+	json.Unmarshal(rc.req.Data, &r)
 
 	reply := ValueMsg{}
 
@@ -90,12 +87,12 @@ func (n *Net) getKey(req Request) {
 	}
 
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 
-func (n *Net) deleteKey(req Request) {
+func (n *Net) deleteKey(rc *RequestContext) {
 	r := KeyMsg{}
-	json.Unmarshal(req.Data, &r)
+	json.Unmarshal(rc.req.Data, &r)
 	
 	reply := DeleteValueReply{}
 
@@ -108,12 +105,12 @@ func (n *Net) deleteKey(req Request) {
 	}	
 
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 
-func (n *Net) updateKey(req Request) {
+func (n *Net) updateKey(rc *RequestContext) {
 	r := KeyValueMsg{}
-	json.Unmarshal(req.Data, &r)
+	json.Unmarshal(rc.req.Data, &r)
 	
 	reply := UpdateValueReply{}	
 
@@ -126,98 +123,94 @@ func (n *Net) updateKey(req Request) {
 	}
 
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 
 
 
-func (n *Net) ping(req Request) {
-	n.app.transport.sendReply(req.SN, []byte{})
+func (n *Net) ping(rc *RequestContext) {
+	rc.replyChan <- []byte{}
 }
 
-func (n *Net) join(req Request) {
+func (n *Net) join(rc *RequestContext) {
 	r := JoinRequest{}
-	json.Unmarshal(req.Data, &r)
+	json.Unmarshal(rc.req.Data, &r)
 
-	fmt.Println("Received a Join message from ", r.Ip+r.Port, "\n")
+	fmt.Println("Received a Join message from ", r.Addr, "\n")
 
 	reply := JoinReply{}
 	reply.Id = n.app.node.nodeId
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 
-func (n *Net) findSuccessor(req Request) {
+func (n *Net) findSuccessor(rc *RequestContext) {
 	r := FindNodeReq{}
-	json.Unmarshal(req.Data, &r)
+	json.Unmarshal(rc.req.Data, &r)
 
 	successor := n.app.findSuccessor(r.Id)
 
 	reply := FindNodeReply{}
 	if successor != nil {
 		reply.Id = successor.nodeId
-		reply.Ip = successor.ip
-		reply.Port = successor.port
+		reply.Addr = successor.addr
 		reply.Found = true
 	} else {
 		reply.Found = false
 	}
 
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 
-func (n *Net) findPredecessor(req Request) {
+func (n *Net) findPredecessor(rc *RequestContext) {
 	r := FindNodeReq{}
-	json.Unmarshal(req.Data, &r)
+	json.Unmarshal(rc.req.Data, &r)
 
 	predecessor := n.app.findPredecessor(r.Id)
 
 	reply := FindNodeReply{}
 	if predecessor != nil {
 		reply.Id = predecessor.nodeId
-		reply.Ip = predecessor.ip
-		reply.Port = predecessor.port
+		reply.Addr = predecessor.addr
 		reply.Found = true
 	} else {
 		reply.Found = false
 	}
 
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 
-func (n *Net) getSuccessor(req Request) {
+func (n *Net) getSuccessor(rc *RequestContext) {
 	successor := n.app.node.finger[0].node
 
 	reply := FindNodeReply{}
 	if successor != nil {
 		reply.Id = successor.nodeId
-		reply.Ip = successor.ip
-		reply.Port = successor.port
+		reply.Addr = successor.addr
 		reply.Found = true
 	} else {
 		reply.Found = false
 	}
 
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 
-func (n *Net) getPredecessor(req Request) {
+func (n *Net) getPredecessor(rc *RequestContext) {
 	predecessor := n.app.node.predecessor
 
 	reply := FindNodeReply{}
 	if predecessor != nil {
 		reply.Id = predecessor.nodeId
-		reply.Ip = predecessor.ip
-		reply.Port = predecessor.port
+		reply.Addr = predecessor.addr
 		reply.Found = true
 	} else {
 		reply.Found = false
 	}
 
 	bytes, _ := json.Marshal(reply)
-	n.app.transport.sendReply(req.SN, bytes)
+	rc.replyChan <- bytes
 }
 

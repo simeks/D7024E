@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+const time_out time.Duration = 3
+
 type Msg struct {
 	Id string
 	Data []byte
@@ -33,11 +35,12 @@ type Packet struct {
 }
 
 type PendingRequest struct {
-	sn int
 	channel chan Reply
 }
-type RecvRequest struct {
-	src string
+
+type RequestContext struct {
+	req *Request
+	replyChan chan []byte
 }
 
 type Transport struct {
@@ -45,7 +48,6 @@ type Transport struct {
 	lastReqSN int
 
 	sentRequests map[int]*PendingRequest
-	recvRequests map[int]*RecvRequest
 
 	lock sync.Mutex
 }
@@ -54,10 +56,9 @@ func (t *Transport) init(bindAddr string) {
 	t.bindAddress = bindAddr
 	t.lastReqSN = 0
 	t.sentRequests = make(map[int]*PendingRequest)
-	t.recvRequests = make(map[int]*RecvRequest)
 }
 
-func (t *Transport) listen(msgChan chan Msg, reqChan chan Request) {
+func (t *Transport) listen(msgChan chan *Msg, reqChan chan *RequestContext) {
 	udpAddr, _ := net.ResolveUDPAddr("udp", t.bindAddress)
 	conn, _ := net.ListenUDP("udp", udpAddr)
 	defer conn.Close()
@@ -67,20 +68,25 @@ func (t *Transport) listen(msgChan chan Msg, reqChan chan Request) {
 		dec.Decode(&packet)
 
 		if packet.Msg != nil {
-			msgChan <- *packet.Msg
+			msgChan <- packet.Msg
 		} else if packet.Request != nil {
-			t.lock.Lock()
-			recvReq := RecvRequest{packet.Src}
-			t.recvRequests[packet.Request.SN] = &recvReq
-			t.lock.Unlock()
+			rc := RequestContext{packet.Request, make(chan []byte)}
+			go t.waitForReply(packet.Request.SN, packet.Src, rc.replyChan)
 
-			reqChan <- *packet.Request
+			reqChan <- &rc
 		} else if packet.Reply != nil {
 			t.processReply(packet.Reply)
 		}
 
 	}
-} 
+}
+
+func (t *Transport) waitForReply(sn int, src string, c chan []byte) {
+	data := <- c
+
+	packet := Packet{t.bindAddress, nil, nil, &Reply{sn, data}}
+	t.sendPacket(src, packet)
+}
 
 func (t *Transport) processReply(reply *Reply) {
 	t.lock.Lock()
@@ -117,29 +123,19 @@ func (t *Transport) sendRequest(dst, msgId string, data []byte) *Reply {
 	t.lock.Lock()
 
 	packet := Packet{t.bindAddress, nil, &Request{t.lastReqSN, msgId, data}, nil}
-	pr := PendingRequest{t.lastReqSN, make(chan Reply)}
+	pr := PendingRequest{make(chan Reply)}
+
 	t.sentRequests[t.lastReqSN] = &pr
 	t.lastReqSN++
 
 	t.lock.Unlock()
-
 	t.sendPacket(dst, packet)
 
-	timeout := time.NewTimer(time.Second * 3)
+	timeout := time.NewTimer(time.Second * time_out)
 	select {
 		case <- timeout.C:
 			return nil
 		case reply := <- pr.channel:
 			return &reply
 	}
-}
-
-func (t *Transport) sendReply(sn int, data []byte) {
-	t.lock.Lock()
-	rr := t.recvRequests[sn]
-	delete(t.recvRequests, sn)
-	t.lock.Unlock()
-
-	packet := Packet{t.bindAddress, nil, nil, &Reply{sn, data}}
-	t.sendPacket(rr.src, packet)
 }

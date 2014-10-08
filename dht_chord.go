@@ -1,11 +1,7 @@
 package main
 
 import (
-	//"encoding/hex"
-	//"fmt"
 	"math/big"
-	//"math/rand"
-	//"strconv"
 	"sync"
 )
 
@@ -18,8 +14,7 @@ type Finger struct {
 
 type Node struct {
 	nodeId      []byte
-	ip          string
-	port        string
+	addr        string
 	finger      [num_bits]Finger
 	predecessor *ExternalNode
 	mutex       sync.Mutex
@@ -27,11 +22,10 @@ type Node struct {
 
 type ExternalNode struct {
 	nodeId []byte
-	ip     string
-	port   string
+	addr   string
 }
 
-func makeDHTNode(id *string, ip string, port string) *Node {
+func makeDHTNode(id *string, addr string) *Node {
 	if id == nil {
 		idStr := generateNodeId()
 		id = &idStr
@@ -43,13 +37,11 @@ func makeDHTNode(id *string, ip string, port string) *Node {
 
 	externalNode := new(ExternalNode)
 	externalNode.nodeId = idBytes
-	externalNode.ip = ip
-	externalNode.port = port
+	externalNode.addr = addr
 
 	newNode := new(Node)
 	newNode.nodeId = idBytes
-	newNode.ip = ip
-	newNode.port = port
+	newNode.addr = addr
 	newNode.predecessor = externalNode
 
 	for i := 0; i < num_bits; i++ {
@@ -71,8 +63,7 @@ func (this *Node) closestPrecedingFinger(id []byte) *ExternalNode {
 
 	extNode := new(ExternalNode)
 	extNode.nodeId = this.nodeId
-	extNode.ip = this.ip
-	extNode.port = this.port
+	extNode.addr = this.addr
 	return extNode
 }
 
