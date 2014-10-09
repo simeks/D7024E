@@ -42,7 +42,7 @@ type JoinReply struct {
 	Id []byte
 }
 
-// findSuccessor, findPredecessor
+// findSuccessor, findPredecessor, closestPrecedingFinger
 type FindNodeReq struct {
 	Id []byte
 }
@@ -214,3 +214,22 @@ func (n *Net) getPredecessor(rc *RequestContext) {
 	rc.replyChan <- bytes
 }
 
+func (n *Net) closestPrecedingFinger(rc *RequestContext) {
+	r := FindNodeReq{}
+	json.Unmarshal(rc.req.Data, &r)
+
+	node := n.app.node.closestPrecedingFinger(r.Id)
+
+	reply := FindNodeReply{}
+
+	if node != nil {
+		reply.Id = node.nodeId
+		reply.Addr = node.addr
+		reply.Found = true
+	} else {
+		reply.Found = false
+	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
+}

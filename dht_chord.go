@@ -3,6 +3,8 @@ package main
 import (
 	"math/big"
 	"sync"
+	"encoding/json"
+	"fmt"
 )
 
 const num_bits int = 160
@@ -73,3 +75,140 @@ func (this *Node) notify(np *ExternalNode) {
 		this.predecessor = np
 	}
 }
+
+
+func (n *ExternalNode) findSuccessor(t *Transport, id []byte) *ExternalNode {
+	req := FindNodeReq{}
+	req.Id = id
+
+	// call FindSuccessor on np, which is already in the ring
+	bytes, _ := json.Marshal(req)
+	r := t.sendRequest(n.addr, "findSuccessor", bytes)	
+	if r == nil {
+		fmt.Println("Call error (findSuccessor)")
+		return nil
+	}
+
+	if r != nil {
+		reply := FindNodeReply{}
+		json.Unmarshal(r.Data, &reply)
+
+		if reply.Found {
+			extNode := new(ExternalNode)
+			extNode.nodeId = reply.Id
+			extNode.addr = reply.Addr
+
+			return extNode
+		}
+	}
+	return nil
+}
+
+func (n *ExternalNode) findPredecessor(t *Transport, id []byte) *ExternalNode {
+	req := FindNodeReq{}
+	req.Id = id
+
+	bytes, _ := json.Marshal(req)
+	r := t.sendRequest(n.addr, "findPredecessor", bytes)
+	if r == nil {
+		fmt.Println("Call error (findPredecessor)")
+		return nil
+	}
+
+	if r != nil {
+		reply := FindNodeReply{}
+		json.Unmarshal(r.Data, &reply)
+
+		if reply.Found {
+			extNode := new(ExternalNode)
+			extNode.nodeId = reply.Id
+			extNode.addr = reply.Addr
+
+			return extNode
+		}
+	}
+	return nil
+}
+
+func (n *ExternalNode) getSuccessor(t *Transport) *ExternalNode {
+	r := t.sendRequest(n.addr, "getSuccessor", []byte{})
+	if r == nil {
+		fmt.Println("Call error (getSuccessor)")
+		return nil
+	}
+
+	if r != nil {
+		reply := FindNodeReply{}
+		json.Unmarshal(r.Data, &reply)
+
+		if reply.Found {
+			extNode := new(ExternalNode)
+			extNode.nodeId = reply.Id
+			extNode.addr = reply.Addr
+
+			return extNode
+		}
+	}
+	return nil
+}
+
+func (n *ExternalNode) getPredecessor(t *Transport) *ExternalNode {
+	r := t.sendRequest(n.addr, "getPredecessor", []byte{})
+	if r == nil {
+		fmt.Println("Call error (getPredecessor)")
+		return nil
+	}
+
+	if r != nil {
+		reply := FindNodeReply{}
+		json.Unmarshal(r.Data, &reply)
+
+		if reply.Found {
+			extNode := new(ExternalNode)
+			extNode.nodeId = reply.Id
+			extNode.addr = reply.Addr
+
+			return extNode
+		}
+	}	
+	return nil
+}
+
+func (n *ExternalNode) notify(t *Transport, en *ExternalNode) {
+	msg := NotifyMsg{}
+	msg.NodeId = en.nodeId
+	msg.Addr = en.addr
+
+	bytes, _ := json.Marshal(msg)
+	t.sendMsg(n.addr, "notify", bytes)
+}
+
+func (n *ExternalNode) closestPrecedingFinger(t *Transport, id []byte) *ExternalNode {
+	req := FindNodeReq{}
+	req.Id = id
+
+	bytes, _ := json.Marshal(req)
+	r := t.sendRequest(n.addr, "closestPrecedingFinger", bytes)
+	if r == nil {
+		fmt.Println("Call error (closestPrecedingFinger)")
+		return nil
+	}
+
+	if r != nil {
+		reply := FindNodeReply{}
+		json.Unmarshal(r.Data, &reply)
+
+		if reply.Found {
+			extNode := new(ExternalNode)
+			extNode.nodeId = reply.Id
+			extNode.addr = reply.Addr
+
+			return extNode
+		}
+	}
+	return nil
+}
+
+
+
+

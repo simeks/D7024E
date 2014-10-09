@@ -117,28 +117,9 @@ func (this *App) addToRing(np *ExternalNode) {
 
 	req := FindNodeReq{}
 	req.Id = this.node.nodeId
-
-	// call FindSuccessor on np, which is already in the ring
-	bytes, _ := json.Marshal(req)
-	r := this.transport.sendRequest(np.addr, "findSuccessor", bytes)
-	if r == nil {
-		fmt.Println("Call error (findSuccessor)")
-		return
-	}
-
-	if r != nil {
-		reply := FindNodeReply{}
-		json.Unmarshal(r.Data, &reply)
-
-		if reply.Found {
-			extNode := new(ExternalNode)
-			extNode.nodeId = reply.Id
-			extNode.addr = reply.Addr
-
-			this.node.finger[0].node = extNode
-		} else {
-			fmt.Println("Could not join ring: Successor not found.")
-		}
+	this.node.finger[0].node = np.findSuccessor(&this.transport, this.node.nodeId)
+	if this.node.finger[0].node == nil {
+		fmt.Println("Could not join ring: Successor not found.")
 	}
 }
 
@@ -147,23 +128,10 @@ func (this *App) findSuccessor(id []byte) *ExternalNode {
 
 	if np != nil {
 		// call GetSuccessor on np
-		r := this.transport.sendRequest(np.addr, "getSuccessor", []byte{})
-		if r == nil {
-			fmt.Println("Call error (getSuccessor)")
-			return nil
-		}
+		s := np.getSuccessor(&this.transport)
 
-		if r != nil {
-			reply := FindNodeReply{}
-			json.Unmarshal(r.Data, &reply)
-
-			if reply.Found {
-				// now we have the successor
-				successor := new(ExternalNode)
-				successor.nodeId = reply.Id
-				successor.addr = reply.Addr
-				return successor
-			}
+		if s != nil {
+			return s
 		}
 	}
 	extNode := new(ExternalNode)
@@ -173,29 +141,29 @@ func (this *App) findSuccessor(id []byte) *ExternalNode {
 }
 
 func (this *App) findPredecessor(id []byte) *ExternalNode {
+	n := &ExternalNode{this.node.nodeId, this.node.addr}
+	succ := this.node.finger[0].node
 
-	if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
-		extNode := new(ExternalNode)
-		extNode.nodeId = this.node.nodeId
-		extNode.addr = this.node.addr
-		return extNode
-	} else {
-		np := this.node.closestPrecedingFinger(id)
-		req := FindNodeReq{}
-		req.Id = id
-
-		// call FindPredecessor on np
-		bytes, _ := json.Marshal(req)
-		r := this.transport.sendRequest(np.addr, "findPredecessor", bytes)
-
-		if r == nil {
-			fmt.Println("Call error (findPredecessor)")
-			return nil
-		}
-
-
-		return nil
+	for between(n.nodeId, succ.nodeId, id) == false {
+		n = n.closestPrecedingFinger(&this.transport, id)
+		succ = n.getSuccessor(&this.transport)
 	}
+
+
+	return n
+
+	// if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
+	// 	extNode := new(ExternalNode)
+	// 	extNode.nodeId = this.node.nodeId
+	// 	extNode.addr = this.node.addr
+	// 	return extNode
+	// } else {
+	// 	np := this.node.closestPrecedingFinger(id)
+	// 	np.findPredecessor(id)
+
+
+	// 	return nil
+	// }
 }
 
 func (this *App) lookup(key string) *ExternalNode {
@@ -215,31 +183,13 @@ func (this *App) stabilize() {
 		successor := this.node.finger[0].node
 
 		// call GetPredecessor on this.node's successor
-		r := this.transport.sendRequest(successor.addr, "getPredecessor", []byte{})
+		p := successor.getPredecessor(&this.transport)
 
-		if r == nil {
-			fmt.Println("Call error (getPredecessor)")
-			return
+		if p != nil && between3(this.node.nodeId, successor.nodeId, p.nodeId) {
+			this.node.finger[0].node = p
 		}
-		if r != nil {
-			reply := FindNodeReply{}
-			json.Unmarshal(r.Data, &reply)
 
-			// now we have the predecessor
-			predecessor := new(ExternalNode)
-			predecessor.nodeId = reply.Id
-			predecessor.addr = reply.Addr
-			if predecessor != nil && reply.Found && between3(this.node.nodeId, successor.nodeId, predecessor.nodeId) {
-				this.node.finger[0].node = predecessor
-			}
-
-			msg := NotifyMsg{}
-			msg.NodeId = this.node.nodeId
-			msg.Addr = this.node.addr
-
-			bytes, _ := json.Marshal(msg)
-			this.transport.sendMsg(successor.addr, "notify", bytes)
-		}
+		successor.notify(&this.transport, &ExternalNode{this.node.nodeId, this.node.addr})
 	}
 }
 
@@ -298,6 +248,9 @@ func (this *App) listen() {
 				case "ping":
 					go this.net.ping(req)
 					break
+				case "closestPrecedingFinger":
+					go this.net.closestPrecedingFinger(req)
+					break
 				}				
 
 		}
@@ -339,3 +292,4 @@ func (this *App) sendPing() {
 	}
 
 }
+
