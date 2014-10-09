@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"time"
 	"sync"
+	"strings"
 )
 
 const time_out time.Duration = 3
@@ -59,7 +60,9 @@ func (t *Transport) init(bindAddr string) {
 }
 
 func (t *Transport) listen(msgChan chan *Msg, reqChan chan *RequestContext) {
-	udpAddr, _ := net.ResolveUDPAddr("udp", t.bindAddress)
+	port := strings.Split(t.bindAddress, ":")[1]
+
+	udpAddr, _ := net.ResolveUDPAddr("udp", "0.0.0.0:"+port)
 	conn, _ := net.ListenUDP("udp", udpAddr)
 	defer conn.Close()
 	dec := gob.NewDecoder(conn)
