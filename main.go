@@ -22,30 +22,25 @@ func main() {
 	}
 
 	app.init(localAddr)
+	go app.listen()
 
 	if remote != "" { // Join existing ring
 		go app.join(remote)
 	}
 
-
-	go func() {
-		http.HandleFunc("/chord/", chordHandler)
-		http.HandleFunc("/post/", func(w http.ResponseWriter, r *http.Request) {
-			postHandler(w, r, &app)
-		})
-		http.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
-			deleteHandler(w, r, &app)
-		})
-		http.HandleFunc("/get/", func(w http.ResponseWriter, r *http.Request) {
-			getHandler(w, r, &app)
-		})
-		http.HandleFunc("/put/", func(w http.ResponseWriter, r *http.Request) {
-			putHandler(w, r, &app)
-		})
-		http.ListenAndServe(":"+strings.Split(localAddr, ":")[1], nil)
-	}()
-	
-
-	app.listen()
+	http.HandleFunc("/chord/", chordHandler)
+	http.HandleFunc("/post/", func(w http.ResponseWriter, r *http.Request) {
+		postHandler(w, r, &app)
+	})
+	http.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
+		deleteHandler(w, r, &app)
+	})
+	http.HandleFunc("/get/", func(w http.ResponseWriter, r *http.Request) {
+		getHandler(w, r, &app)
+	})
+	http.HandleFunc("/put/", func(w http.ResponseWriter, r *http.Request) {
+		putHandler(w, r, &app)
+	})
+	http.ListenAndServe(":"+strings.Split(localAddr, ":")[1], nil)
 
 }
