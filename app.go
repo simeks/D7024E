@@ -304,6 +304,24 @@ func (this *App) listen() {
 	}
 }
 
+func (this *App) pingFinger(i int) {
+	finger := this.node.finger[i].node
+	if finger != nil {
+		r := this.transport.sendRequest(finger.addr, "ping", []byte{})
+
+		if r == nil {
+			// Finger[i] has timed out
+			fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
+			if i == 0 {
+				// We always need a successor to be set.
+				this.node.finger[i].node = &ExternalNode{this.node.nodeId, this.node.addr}
+			} else {
+				this.node.finger[i].node = nil
+			}
+		}
+	}
+}
+
 
 func (this *App) sendPing() {
 	if this.node.predecessor != nil {
@@ -317,21 +335,7 @@ func (this *App) sendPing() {
 	}
 
 	for i := 0; i < num_bits; i++ {
-		finger := this.node.finger[i].node
-		if finger != nil {
-			r := this.transport.sendRequest(finger.addr, "ping", []byte{})
-
-			if r == nil {
-				// Finger[i] has timed out
-				fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
-				if i == 0 {
-					// We always need a successor to be set.
-					this.node.finger[i].node = &ExternalNode{this.node.nodeId, this.node.addr}
-				} else {
-					this.node.finger[i].node = nil
-				}
-			}
-		}
+		go this.pingFinger(i)
 	}
 
 }
