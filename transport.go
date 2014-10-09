@@ -62,7 +62,7 @@ func (t *Transport) init(bindAddr string) {
 func (t *Transport) listen(msgChan chan *Msg, reqChan chan *RequestContext) {
 	port := strings.Split(t.bindAddress, ":")[1]
 
-	udpAddr, _ := net.ResolveUDPAddr("udp", "0.0.0.0:"+port)
+	udpAddr, _ := net.ResolveUDPAddr("udp", ":"+port)
 	conn, _ := net.ListenUDP("udp", udpAddr)
 	defer conn.Close()
 	dec := gob.NewDecoder(conn)

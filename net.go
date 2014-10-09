@@ -64,7 +64,7 @@ func (n *Net) notify(msg *Msg) {
 	json.Unmarshal(msg.Data, &m)
 
 	node := ExternalNode{m.NodeId, m.Addr}
-	n.app.node.notify(&node)
+	n.app.notify(&node)
 }
 
 func (n *Net) insertKey(msg *Msg) {

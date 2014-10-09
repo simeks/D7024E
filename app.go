@@ -113,11 +113,12 @@ func (this *App) addToRing(np *ExternalNode) {
 	this.node.mutex.Lock()
 	defer this.node.mutex.Unlock()
 
-	this.node.predecessor = nil
+	this.changePredecessor(nil)
 
 	req := FindNodeReq{}
 	req.Id = this.node.nodeId
-	this.node.finger[0].node = np.findSuccessor(&this.transport, this.node.nodeId)
+	this.changeSuccessor(np.findSuccessor(&this.transport, this.node.nodeId))
+
 	if this.node.finger[0].node == nil {
 		fmt.Println("Could not join ring: Successor not found.")
 	}
@@ -149,21 +150,7 @@ func (this *App) findPredecessor(id []byte) *ExternalNode {
 		succ = n.getSuccessor(&this.transport)
 	}
 
-
 	return n
-
-	// if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
-	// 	extNode := new(ExternalNode)
-	// 	extNode.nodeId = this.node.nodeId
-	// 	extNode.addr = this.node.addr
-	// 	return extNode
-	// } else {
-	// 	np := this.node.closestPrecedingFinger(id)
-	// 	np.findPredecessor(id)
-
-
-	// 	return nil
-	// }
 }
 
 func (this *App) lookup(key string) *ExternalNode {
@@ -186,7 +173,7 @@ func (this *App) stabilize() {
 		p := successor.getPredecessor(&this.transport)
 
 		if p != nil && between3(this.node.nodeId, successor.nodeId, p.nodeId) {
-			this.node.finger[0].node = p
+			this.changeSuccessor(p)
 		}
 
 		successor.notify(&this.transport, &ExternalNode{this.node.nodeId, this.node.addr})
@@ -199,7 +186,12 @@ func (this *App) fixFingers() {
 
 	i := rand.Intn(num_bits)
 	successor := this.findSuccessor(this.node.finger[i].start)
-	this.node.finger[i].node = successor
+
+	if i == 0 {
+		this.changeSuccessor(successor)
+	} else {
+		this.node.finger[i].node = successor
+	}
 }
 
 func (this *App) listen() {
@@ -267,7 +259,7 @@ func (this *App) pingFinger(i int) {
 			fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
 			if i == 0 {
 				// We always need a successor to be set.
-				this.node.finger[i].node = &ExternalNode{this.node.nodeId, this.node.addr}
+				this.changeSuccessor(&ExternalNode{this.node.nodeId, this.node.addr})
 			} else {
 				this.node.finger[i].node = nil
 			}
@@ -283,7 +275,7 @@ func (this *App) sendPing() {
 		if r == nil {
 			// Predecessor has timed out
 			fmt.Println("Predecessor has timed out")
-			this.node.predecessor = nil
+			this.changePredecessor(nil)
 		}
 	}
 
@@ -293,3 +285,35 @@ func (this *App) sendPing() {
 
 }
 
+
+// np thinks it might be our predecessor.
+func (this *App) notify(np *ExternalNode) {
+	if this.node.predecessor == nil || between3(this.node.predecessor.nodeId, this.node.nodeId, np.nodeId) {
+		this.changePredecessor(np)
+	}
+}
+
+func (this *App) updateKeyValue() {
+	/*
+	* 
+	* (predecessor, this] - My values
+	*/
+
+	//for k, v := range this.keyValue {
+
+	//}
+}
+
+func (this *App) changeSuccessor(n *ExternalNode) {
+	/*
+	- Notify successor about 
+	*/
+
+	this.node.finger[0].node = n
+}
+
+func (this *App) changePredecessor(n *ExternalNode) {
+	// If the predecessor 
+
+	this.node.predecessor = n
+}

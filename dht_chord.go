@@ -69,14 +69,6 @@ func (this *Node) closestPrecedingFinger(id []byte) *ExternalNode {
 	return extNode
 }
 
-// np thinks it might be our predecessor.
-func (this *Node) notify(np *ExternalNode) {
-	if this.predecessor == nil || between3(this.predecessor.nodeId, this.nodeId, np.nodeId) {
-		this.predecessor = np
-	}
-}
-
-
 func (n *ExternalNode) findSuccessor(t *Transport, id []byte) *ExternalNode {
 	req := FindNodeReq{}
 	req.Id = id

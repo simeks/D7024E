@@ -3,16 +3,17 @@ package main
 import (
 	"net/http"
 	"os"
+	"strings"
 )
 
 func main() {
 	app := App{}
 
-	port := "13337"
+	localAddr := "127.0.0.1:13337"
 	remote := ""
 	for i := 1; i < len(os.Args); i++ {
-		if os.Args[i] == "-p" && (i+1) < len(os.Args) { // Port <port number>
-			port = os.Args[i+1]
+		if os.Args[i] == "-l" && (i+1) < len(os.Args) { // Port <port number>
+			localAddr = os.Args[i+1]
 			i++
 		} else if os.Args[i] == "-j" && (i+1) < len(os.Args) { // Join <remote host>
 			remote = os.Args[i+1]
@@ -20,7 +21,7 @@ func main() {
 		}
 	}
 
-	app.init("127.0.0.1:"+port)
+	app.init(localAddr)
 
 	if remote != "" { // Join existing ring
 		go app.join(remote)
@@ -41,7 +42,7 @@ func main() {
 		http.HandleFunc("/put/", func(w http.ResponseWriter, r *http.Request) {
 			putHandler(w, r, &app)
 		})
-		http.ListenAndServe(":"+port, nil)
+		http.ListenAndServe(":"+strings.Split(localAddr, ":")[1], nil)
 	}()
 	
 
