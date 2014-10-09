@@ -1,198 +1,216 @@
 package main
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"net/http"
 )
 
-func chordHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "<h1>Insert a new key/value pair</h1>"+
-		"<form action=\"/post/\" method=\"POST\">"+
-		"value:"+
-		"<textarea name=\"insertvalue\"></textarea><br>"+
-		"key:"+
-		"<textarea name=\"insertkey\"></textarea><br>"+
-		"<input type=\"submit\" value=\"Submit\">"+
-		"</form>"+
-		"<h1>Delete a key/value pair</h1>"+
-		"<form action=\"/delete/\" method=\"POST\">"+
-		"key:"+
-		"<textarea name=\"deletekey\"></textarea><br>"+
-		"<input type=\"submit\" value=\"Submit\">"+
-		"</form>"+
-		"<h1>Update value for key</h1>"+
-		"<form action=\"/put/\" method=\"POST\">"+
-		"value:"+
-		"<textarea name=\"updatevalue\"></textarea><br>"+
-		"key:"+
-		"<textarea name=\"updatekey\"></textarea><br>"+
-		"<input type=\"submit\" value=\"Submit\">"+
-		"</form>"+
-		"<h1>Get the value for key</h1>"+
-		"<form action=\"/get/\" method=\"POST\">"+
-		"key:"+
-		"<textarea name=\"getkey\"></textarea><br>"+
-		"<input type=\"submit\" value=\"Submit\">"+
-		"</form>")
+
+type NotifyMsg struct {
+	NodeId []byte
+	Addr     string
 }
 
-func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
-	value := r.FormValue("insertvalue")
-	key := r.FormValue("insertkey")
-	hashkey := sha1hash(key)
+// insertKey, updateKey
+type KeyValueMsg struct {
+	Key, Value string
+}
 
-	responsibleNode := app.lookup(hashkey)
+// getKey, deleteKey
+type KeyMsg struct {
+	Key string
+}
 
-	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
-		app.node.mutex.Lock()
-		defer app.node.mutex.Unlock()
-		app.node.keys[hashkey] = value
+type ValueMsg struct {
+	Value string
+}
 
-	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		args.Value = value
-		reply := new(AddReply)
+type DeleteValueReply struct {
+	Deleted bool
+}
+type UpdateValueReply struct {
+	Updated bool
+}
 
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("InsertKey", addr, args, reply, time_out)
 
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
-			return
-		}
+type JoinRequest struct {
+	Addr string
+	Id []byte
+}
+
+type JoinReply struct {
+	Id []byte
+}
+
+// findSuccessor, findPredecessor
+type FindNodeReq struct {
+	Id []byte
+}
+
+// findSuccessor, findPredecessor, getSuccessor, getPredecessor
+type FindNodeReply struct {
+	Id []byte
+	Addr string
+	Found bool
+}
+
+type Net struct {
+	app *App
+}
+
+
+func (n *Net) notify(msg *Msg) {
+	m := NotifyMsg{}
+	json.Unmarshal(msg.Data, &m)
+
+	node := ExternalNode{m.NodeId, m.Addr}
+	n.app.node.notify(&node)
+}
+
+func (n *Net) insertKey(msg *Msg) {
+	m := KeyValueMsg{}
+	json.Unmarshal(msg.Data, &m)
+
+	n.app.keyValue[m.Key] = m.Value
+	
+}
+
+func (n *Net) getKey(rc *RequestContext) {
+	r := KeyMsg{}
+	json.Unmarshal(rc.req.Data, &r)
+
+	reply := ValueMsg{}
+
+	val, ok := n.app.keyValue[r.Key]
+	if ok {
+		reply.Value = val
 	}
-	fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-		"<p>Key/value pair inserted successfully!</p>")
 
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
 }
 
-func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
-	key := r.FormValue("deletekey")
-	hashkey := sha1hash(key)
+func (n *Net) deleteKey(rc *RequestContext) {
+	r := KeyMsg{}
+	json.Unmarshal(rc.req.Data, &r)
+	
+	reply := DeleteValueReply{}
 
-	responsibleNode := app.lookup(hashkey)
-
-	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
-		_, ok := app.node.keys[hashkey]
-		if ok {
-			app.node.mutex.Lock()
-			defer app.node.mutex.Unlock()
-
-			delete(app.node.keys, hashkey)
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Key deleted successfully!</p>")
-		} else {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Key was not found.</p>")
-		}
+	_, ok := n.app.keyValue[r.Key]
+	if ok {
+		delete(n.app.keyValue, r.Key)
+		reply.Deleted = true
 	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		reply := new(AddReply)
+		reply.Deleted = false
+	}	
 
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("DeleteKey", addr, args, reply, time_out)
-
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
-			return
-		}
-
-		if reply != nil {
-			if reply.WasDeleted == 1 {
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Key deleted successfully!</p>")
-			} else {
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Key was not found.</p>")
-			}
-		}
-	}
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
 }
 
-func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
-	key := r.FormValue("getkey")
-	hashkey := sha1hash(key)
+func (n *Net) updateKey(rc *RequestContext) {
+	r := KeyValueMsg{}
+	json.Unmarshal(rc.req.Data, &r)
+	
+	reply := UpdateValueReply{}	
 
-	responsibleNode := app.lookup(hashkey)
-
-	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
-		_, ok := app.node.keys[hashkey]
-		if ok {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Value: "+app.node.keys[hashkey]+"</p>")
-		} else {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Key was not found.</p>")
-		}
+	_, ok := n.app.keyValue[r.Key]
+	if ok {
+		n.app.keyValue[r.Key] = r.Value
+		reply.Updated = true
 	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		reply := new(AddReply)
-
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("GetKey", addr, args, reply, time_out)
-
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
-			return
-		}
-
-		if reply != nil {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Value: "+reply.Value+"</p>")
-		} else {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Key was not found.</p>")
-		}
+		reply.Updated = false
 	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
 }
 
-func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
-	value := r.FormValue("updatevalue")
-	key := r.FormValue("updatekey")
-	hashkey := sha1hash(key)
 
-	responsibleNode := app.lookup(hashkey)
 
-	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
-		_, ok := app.node.keys[hashkey]
-		if ok {
-			app.node.keys[hashkey] = value
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Value updated successfully!</p>")
-		} else {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Key was not found.</p>")
-		}
+func (n *Net) ping(rc *RequestContext) {
+	rc.replyChan <- []byte{}
+}
+
+func (n *Net) join(rc *RequestContext) {
+	r := JoinRequest{}
+	json.Unmarshal(rc.req.Data, &r)
+
+	fmt.Println("Received a Join message from ", r.Addr, "\n")
+
+	reply := JoinReply{}
+	reply.Id = n.app.node.nodeId
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
+}
+
+func (n *Net) findSuccessor(rc *RequestContext) {
+	r := FindNodeReq{}
+	json.Unmarshal(rc.req.Data, &r)
+
+	successor := n.app.findSuccessor(r.Id)
+
+	reply := FindNodeReply{}
+	if successor != nil {
+		reply.Id = successor.nodeId
+		reply.Addr = successor.addr
+		reply.Found = true
 	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		args.Value = value
-		reply := new(AddReply)
-
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("UpdateKey", addr, args, reply, time_out)
-
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
-			return
-		}
-
-		if reply != nil {
-			if reply.WasUpdated == 1 {
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Value updated successfully!</p>")
-			} else {
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Key was not found.</p>")
-			}
-		}
+		reply.Found = false
 	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
 }
+
+func (n *Net) findPredecessor(rc *RequestContext) {
+	r := FindNodeReq{}
+	json.Unmarshal(rc.req.Data, &r)
+
+	predecessor := n.app.findPredecessor(r.Id)
+
+	reply := FindNodeReply{}
+	if predecessor != nil {
+		reply.Id = predecessor.nodeId
+		reply.Addr = predecessor.addr
+		reply.Found = true
+	} else {
+		reply.Found = false
+	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
+}
+
+func (n *Net) getSuccessor(rc *RequestContext) {
+	successor := n.app.node.finger[0].node
+
+	reply := FindNodeReply{}
+	if successor != nil {
+		reply.Id = successor.nodeId
+		reply.Addr = successor.addr
+		reply.Found = true
+	} else {
+		reply.Found = false
+	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
+}
+
+func (n *Net) getPredecessor(rc *RequestContext) {
+	predecessor := n.app.node.predecessor
+
+	reply := FindNodeReply{}
+	if predecessor != nil {
+		reply.Id = predecessor.nodeId
+		reply.Addr = predecessor.addr
+		reply.Found = true
+	} else {
+		reply.Found = false
+	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
+}
+

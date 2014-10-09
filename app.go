@@ -3,141 +3,65 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/liamzebedee/go-qrp"
 	"math/big"
 	"math/rand"
-	"strconv"
 	"time"
+	"encoding/json"
 )
-
-// 0 = no time out
-const time_out int = 3
 
 type App struct {
 	node    *Node
-	nodeUDP *qrp.Node
+	transport Transport
+	net Net
+
+	keyValue map[string]string
 }
 
-type AddService struct {
-	app *App
-}
+func (this *App) init(bindAddr string) {
+	this.keyValue = make(map[string]string)
 
-type AddArgs struct {
-	Id         []byte
-	Ip, Port   string
-	Key, Value string
-}
-type AddReply struct {
-	Id                     []byte
-	Ip, Port               string
-	Value                  string
-	WasDeleted, WasUpdated int
-}
-
-func (this *App) init(bindAddr, bindPort string) {
-	this.node = makeDHTNode(nil, bindAddr, bindPort)
-
-	node, err := qrp.CreateNodeUDP("udp", bindAddr+":"+bindPort, 512)
-	if err != nil {
-		fmt.Print("ERROR: Can't create node -", err.Error())
-		return
-	}
-	this.nodeUDP = node
-	fmt.Println("\n" + bindAddr + ":" + bindPort + ": Node " + hex.EncodeToString(this.node.nodeId) + " created\n")
-
-	join := new(AddService)
-	join.app = this
-	node.Register(join)
-	fmt.Println("Join service registered")
-
-	findsuccessor := new(AddService)
-	findsuccessor.app = this
-	node.Register(findsuccessor)
-	fmt.Println("FindSuccessor service registered")
-
-	findpredecessor := new(AddService)
-	findpredecessor.app = this
-	node.Register(findpredecessor)
-	fmt.Println("FindPredecessor service registered")
-
-	getsuccessor := new(AddService)
-	getsuccessor.app = this
-	node.Register(getsuccessor)
-	fmt.Println("GetSuccessor service registered")
-
-	getpredecessor := new(AddService)
-	getpredecessor.app = this
-	node.Register(getpredecessor)
-	fmt.Println("GetPredecessor service registered")
-
-	notify := new(AddService)
-	notify.app = this
-	node.Register(notify)
-	fmt.Println("Notify service registered")
-
-	insertkey := new(AddService)
-	insertkey.app = this
-	node.Register(insertkey)
-	fmt.Println("InsertKey service registered")
-
-	deletekey := new(AddService)
-	deletekey.app = this
-	node.Register(deletekey)
-	fmt.Println("DeleteKey service registered")
-
-	getkey := new(AddService)
-	getkey.app = this
-	node.Register(getkey)
-	fmt.Println("GetKey service registered")
-
-	updatekey := new(AddService)
-	updatekey.app = this
-	node.Register(updatekey)
-	fmt.Println("UpdateKey service registered")
-
-	ping := new(AddService)
-	ping.app = this
-	node.Register(ping)
-	fmt.Println("Ping service registered")
-
-	fmt.Println("")
+	this.node = makeDHTNode(nil, bindAddr)
+	this.transport.init(bindAddr)
+	this.net = Net{this}
 
 	// call stabilize and fixFingers periodically
 	go func() {
 		c := time.Tick(3 * time.Second)
-		for now := range c {
-			fmt.Println(now)
-			this.stabilize()
-			this.fixFingers()
+		for {
+			select {
+			case <-c:
+				this.stabilize()
+				this.fixFingers()
 
-			fmt.Println("Node: ", hex.EncodeToString(this.node.nodeId))
-			fmt.Println("Successor: ", hex.EncodeToString(this.node.finger[0].node.nodeId))
-			if this.node.predecessor != nil {
-				fmt.Println("Predecessor: ", hex.EncodeToString(this.node.predecessor.nodeId))
+				fmt.Println("Node: ", hex.EncodeToString(this.node.nodeId))
+				fmt.Println("Successor: ", hex.EncodeToString(this.node.finger[0].node.nodeId))
+				if this.node.predecessor != nil {
+					fmt.Println("Predecessor: ", hex.EncodeToString(this.node.predecessor.nodeId))
+				}
+
+				fmt.Println("Keys: ")
+				for x := range this.keyValue {
+					fmt.Println(x)
+				}
+				fmt.Println("")
+
+				//// check what the 80th finger is
+				//if this.node.finger[79].node != nil {
+				//	fmt.Println("80th finger: ", hex.EncodeToString(this.node.finger[79].node.nodeId))
+				//}
+
+				//// check what the 120th finger is
+				//if this.node.finger[119].node != nil {
+				//	fmt.Println("120th finger: ", hex.EncodeToString(this.node.finger[119].node.nodeId))
+				//}
+
+				//// check what the 160th finger is
+				//if this.node.finger[159].node != nil {
+				//	fmt.Println("160th finger: ", hex.EncodeToString(this.node.finger[159].node.nodeId))
+				//}
+
+				//fmt.Println("")
 			}
-
-			fmt.Println("Keys: ")
-			for x := range this.node.keys {
-				fmt.Println(x)
-			}
-			fmt.Println("")
-
-			//// check what the 80th finger is
-			//if this.node.finger[79].node != nil {
-			//	fmt.Println("80th finger: ", hex.EncodeToString(this.node.finger[79].node.nodeId))
-			//}
-
-			//// check what the 120th finger is
-			//if this.node.finger[119].node != nil {
-			//	fmt.Println("120th finger: ", hex.EncodeToString(this.node.finger[119].node.nodeId))
-			//}
-
-			//// check what the 160th finger is
-			//if this.node.finger[159].node != nil {
-			//	fmt.Println("160th finger: ", hex.EncodeToString(this.node.finger[159].node.nodeId))
-			//}
-
-			//fmt.Println("")
 		}
 	}()
 
@@ -153,34 +77,35 @@ func (this *App) init(bindAddr, bindPort string) {
 	}()
 }
 
+
 //Tries to join the node at the specified address.
 func (this *App) join(addr string) {
-	args := new(AddArgs)
-	args.Id = this.node.nodeId
-	args.Ip = this.node.ip
-	args.Port = this.node.port
-
-	reply := new(AddReply)
+	req := JoinRequest{}
+	req.Id = this.node.nodeId
+	req.Addr = this.node.addr
 
 	// get a node that is already in the ring
-	fmt.Println("Calling Join on ", addr, "\n")
-	err := this.nodeUDP.CallUDP("Join", addr, args, reply, time_out)
+	fmt.Println("Calling Join on ", addr)
 
-	if err != nil {
-		fmt.Print("Call error - ")
-		fmt.Println(err.Error())
+	bytes, _ := json.Marshal(req)
+	r := this.transport.sendRequest(addr, "join", bytes)
+	if r == nil {
+		fmt.Println("Call error (join)")
 		return
 	}
 
-	if reply != nil {
-		extNode := new(ExternalNode)
+	if r != nil {
+		reply := JoinReply{}
+		json.Unmarshal(r.Data, &reply)
+
+		extNode := ExternalNode{}
 		extNode.nodeId = reply.Id
-		extNode.ip = reply.Ip
-		extNode.port = reply.Port
+		extNode.addr = addr
 
 		// extNode is already in the ring
-		this.addToRing(extNode)
+		this.addToRing(&extNode)
 	}
+	
 }
 
 func (this *App) addToRing(np *ExternalNode) {
@@ -189,31 +114,30 @@ func (this *App) addToRing(np *ExternalNode) {
 
 	this.node.predecessor = nil
 
-	args := new(AddArgs)
-	args.Id = this.node.nodeId
-	args.Ip = this.node.ip
-	args.Port = this.node.port
-
-	reply := new(AddReply)
-
-	addr := np.ip + ":" + np.port
+	req := FindNodeReq{}
+	req.Id = this.node.nodeId
 
 	// call FindSuccessor on np, which is already in the ring
-	err := this.nodeUDP.CallUDP("FindSuccessor", addr, args, reply, time_out)
-
-	if err != nil {
-		fmt.Print("Call error - ")
-		fmt.Println(err.Error())
+	bytes, _ := json.Marshal(req)
+	r := this.transport.sendRequest(np.addr, "findSuccessor", bytes)
+	if r == nil {
+		fmt.Println("Call error (findSuccessor)")
 		return
 	}
 
-	if reply != nil {
-		extNode := new(ExternalNode)
-		extNode.nodeId = reply.Id
-		extNode.ip = reply.Ip
-		extNode.port = reply.Port
+	if r != nil {
+		reply := FindNodeReply{}
+		json.Unmarshal(r.Data, &reply)
 
-		this.node.finger[0].node = extNode
+		if reply.Found {
+			extNode := new(ExternalNode)
+			extNode.nodeId = reply.Id
+			extNode.addr = reply.Addr
+
+			this.node.finger[0].node = extNode
+		} else {
+			fmt.Println("Could not join ring: Successor not found.")
+		}
 	}
 }
 
@@ -221,33 +145,29 @@ func (this *App) findSuccessor(id []byte) *ExternalNode {
 	np := this.findPredecessor(id)
 
 	if np != nil {
-		args := new(AddArgs)
-		reply := new(AddReply)
-
-		addr := np.ip + ":" + np.port
-
 		// call GetSuccessor on np
-		err := this.nodeUDP.CallUDP("GetSuccessor", addr, args, reply, time_out)
-
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
+		r := this.transport.sendRequest(np.addr, "getSuccessor", []byte{})
+		if r == nil {
+			fmt.Println("Call error (getSuccessor)")
 			return nil
 		}
 
-		if reply != nil {
-			// now we have the successor
-			successor := new(ExternalNode)
-			successor.nodeId = reply.Id
-			successor.ip = reply.Ip
-			successor.port = reply.Port
-			return successor
+		if r != nil {
+			reply := FindNodeReply{}
+			json.Unmarshal(r.Data, &reply)
+
+			if reply.Found {
+				// now we have the successor
+				successor := new(ExternalNode)
+				successor.nodeId = reply.Id
+				successor.addr = reply.Addr
+				return successor
+			}
 		}
 	}
 	extNode := new(ExternalNode)
 	extNode.nodeId = this.node.nodeId
-	extNode.ip = this.node.ip
-	extNode.port = this.node.port
+	extNode.addr = this.node.addr
 	return extNode
 }
 
@@ -256,26 +176,23 @@ func (this *App) findPredecessor(id []byte) *ExternalNode {
 	if between(this.node.nodeId, this.node.finger[0].node.nodeId, id) {
 		extNode := new(ExternalNode)
 		extNode.nodeId = this.node.nodeId
-		extNode.ip = this.node.ip
-		extNode.port = this.node.port
+		extNode.addr = this.node.addr
 		return extNode
 	} else {
 		np := this.node.closestPrecedingFinger(id)
-		args := new(AddArgs)
-		args.Id = id
-
-		reply := new(AddReply)
-
-		addr := np.ip + ":" + np.port
+		req := FindNodeReq{}
+		req.Id = id
 
 		// call FindPredecessor on np
-		err := this.nodeUDP.CallUDP("FindPredecessor", addr, args, reply, time_out)
+		bytes, _ := json.Marshal(req)
+		r := this.transport.sendRequest(np.addr, "findPredecessor", bytes)
 
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
+		if r == nil {
+			fmt.Println("Call error (findPredecessor)")
 			return nil
 		}
+
+
 		return nil
 	}
 }
@@ -293,41 +210,36 @@ func (this *App) stabilize() {
 	if this.node.finger[0].node != nil {
 		this.node.mutex.Lock()
 		defer this.node.mutex.Unlock()
-		args := new(AddArgs)
-		reply := new(AddReply)
 
-		addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
+		successor := this.node.finger[0].node
+
 		// call GetPredecessor on this.node's successor
-		err := this.nodeUDP.CallUDP("GetPredecessor", addr, args, reply, time_out)
+		r := this.transport.sendRequest(successor.addr, "getPredecessor", []byte{})
 
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
+		if r == nil {
+			fmt.Println("Call error (getPredecessor)")
 			return
 		}
-		if reply != nil {
+		if r != nil {
+			reply := FindNodeReply{}
+			json.Unmarshal(r.Data, &reply)
+
 			// now we have the predecessor
 			predecessor := new(ExternalNode)
 			predecessor.nodeId = reply.Id
-			predecessor.ip = reply.Ip
-			predecessor.port = reply.Port
-			if predecessor != nil && between3(this.node.nodeId, this.node.finger[0].node.nodeId, predecessor.nodeId) {
+			predecessor.addr = reply.Addr
+			if predecessor != nil && reply.Found && between3(this.node.nodeId, successor.nodeId, predecessor.nodeId) {
 				this.node.finger[0].node = predecessor
 			}
-			addr := this.node.finger[0].node.ip + ":" + this.node.finger[0].node.port
 
-			args.Id = this.node.nodeId
-			args.Ip = this.node.ip
-			args.Port = this.node.port
-			err := this.nodeUDP.CallUDP("Notify", addr, args, reply, time_out)
-			if err != nil {
-				fmt.Print("Call error - ")
-				fmt.Println(err.Error())
-				return
-			}
+			msg := NotifyMsg{}
+			msg.NodeId = this.node.nodeId
+			msg.Addr = this.node.addr
+
+			bytes, _ := json.Marshal(msg)
+			this.transport.sendMsg(successor.addr, "notify", bytes)
 		}
 	}
-	return
 }
 
 func (this *App) fixFingers() {
@@ -340,38 +252,87 @@ func (this *App) fixFingers() {
 }
 
 func (this *App) listen() {
+
+	msgChan := make(chan *Msg)
+	reqChan := make(chan *RequestContext)
+	go this.transport.listen(msgChan, reqChan)
+
 	for {
-		err := this.nodeUDP.ListenAndServe()
-		if err != nil {
-			fmt.Println("Error serving -", err.Error())
-			return
+		select {
+			case msg := <- msgChan:
+				switch msg.Id {
+				case "notify":
+					go this.net.notify(msg)
+					break
+				case "insertKey":
+					go this.net.insertKey(msg)
+					break
+				}
+			case req := <- reqChan:
+				switch req.req.Id {
+				case "join":
+					go this.net.join(req)
+					break
+				case "findSuccessor":
+					go this.net.findSuccessor(req)
+					break
+				case "findPredecessor":
+					go this.net.findPredecessor(req)
+					break
+				case "getSuccessor":
+					go this.net.getSuccessor(req)
+					break
+				case "getPredecessor":
+					go this.net.getPredecessor(req)
+					break
+				case "getKey":
+					go this.net.getKey(req)
+					break
+				case "deleteKey":
+					go this.net.deleteKey(req)
+					break
+				case "updateKey":
+					go this.net.updateKey(req)
+					break
+				case "ping":
+					go this.net.ping(req)
+					break
+				}				
+
 		}
 	}
 }
 
+
 func (this *App) sendPing() {
+	/*
 	args := new(AddArgs)
 	reply := new(AddReply)
 	args.Id = this.node.nodeId
 
 	if this.node.predecessor != nil {
-		err := this.nodeUDP.CallUDP("Ping", this.node.predecessor.ip+":"+this.node.predecessor.port, args, reply, 3)
-		if err != nil {
+
+		//err := this.nodeUDP.CallUDP("Ping", this.node.predecessor.addr, args, reply, 3)
+		
+		//if err != nil {
 			// Predecessor has timed out
-			fmt.Println("Predecessor has timed out")
-			this.node.predecessor = nil
-		}
+		//	fmt.Println("Predecessor has timed out")
+		//	this.node.predecessor = nil
+		//}
 	}
 
 	for i := 0; i < num_bits; i++ {
 		finger := this.node.finger[i].node
 		if finger != nil {
-			err := this.nodeUDP.CallUDP("Ping", finger.ip+":"+finger.port, args, reply, 3)
-			if err != nil {
+
+			//err := this.nodeUDP.CallUDP("Ping", finger.addr, args, reply, 3)
+
+			//if err != nil {
 				// Finger[i] has timed out
-				fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
-				this.node.finger[i].node = nil
-			}
+			//	fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
+			//	this.node.finger[i].node = nil
+			//}
 		}
 	}
+	*/
 }

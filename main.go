@@ -20,11 +20,12 @@ func main() {
 		}
 	}
 
-	app.init("127.0.0.1", port)
+	app.init("127.0.0.1:"+port)
 
 	if remote != "" { // Join existing ring
 		go app.join(remote)
 	}
+
 
 	go func() {
 		http.HandleFunc("/chord/", chordHandler)
@@ -42,6 +43,7 @@ func main() {
 		})
 		http.ListenAndServe(":"+port, nil)
 	}()
+	
 
 	app.listen()
 

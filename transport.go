@@ -2,93 +2,140 @@ package main
 
 import (
 	"fmt"
+	"net"
+	"encoding/gob"
+	"time"
+	"sync"
 )
 
-func (s *AddService) Join(args *AddArgs, reply *AddReply) {
-	fmt.Println("Received a Join message from ", args.Ip+args.Port, "\n")
-	reply.Id = s.app.node.nodeId
-	reply.Ip = s.app.node.ip
-	reply.Port = s.app.node.port
+const time_out time.Duration = 3
+
+type Msg struct {
+	Id string
+	Data []byte
 }
 
-func (s *AddService) FindSuccessor(args *AddArgs, reply *AddReply) {
-	successor := s.app.findSuccessor(args.Id)
+type Request struct {
+	SN int
+	Id string
+	Data []byte
+}
 
-	if successor != nil {
-		reply.Id = successor.nodeId
-		reply.Ip = successor.ip
-		reply.Port = successor.port
+type Reply struct {
+	SN int
+	Data []byte
+}
+
+type Packet struct {
+	Src string
+
+	Msg *Msg
+	Request *Request
+	Reply *Reply
+}
+
+type PendingRequest struct {
+	channel chan Reply
+}
+
+type RequestContext struct {
+	req *Request
+	replyChan chan []byte
+}
+
+type Transport struct {
+	bindAddress string
+	lastReqSN int
+
+	sentRequests map[int]*PendingRequest
+
+	lock sync.Mutex
+}
+
+func (t *Transport) init(bindAddr string) {
+	t.bindAddress = bindAddr
+	t.lastReqSN = 0
+	t.sentRequests = make(map[int]*PendingRequest)
+}
+
+func (t *Transport) listen(msgChan chan *Msg, reqChan chan *RequestContext) {
+	udpAddr, _ := net.ResolveUDPAddr("udp", t.bindAddress)
+	conn, _ := net.ListenUDP("udp", udpAddr)
+	defer conn.Close()
+	dec := gob.NewDecoder(conn)
+	for {
+		packet := Packet{}
+		dec.Decode(&packet)
+
+		if packet.Msg != nil {
+			msgChan <- packet.Msg
+		} else if packet.Request != nil {
+			rc := RequestContext{packet.Request, make(chan []byte)}
+			go t.waitForReply(packet.Request.SN, packet.Src, rc.replyChan)
+
+			reqChan <- &rc
+		} else if packet.Reply != nil {
+			t.processReply(packet.Reply)
+		}
+
 	}
 }
 
-func (s *AddService) FindPredecessor(args *AddArgs, reply *AddReply) {
-	predecessor := s.app.findPredecessor(args.Id)
-	if predecessor != nil {
-		reply.Id = predecessor.nodeId
-		reply.Ip = predecessor.ip
-		reply.Port = predecessor.port
+func (t *Transport) waitForReply(sn int, src string, c chan []byte) {
+	data := <- c
+
+	packet := Packet{t.bindAddress, nil, nil, &Reply{sn, data}}
+	t.sendPacket(src, packet)
+}
+
+func (t *Transport) processReply(reply *Reply) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	pr := t.sentRequests[reply.SN]
+	pr.channel <- *reply
+
+	delete(t.sentRequests, reply.SN)
+}
+
+func (t *Transport) sendPacket(dst string, packet Packet) {
+	udpAddr, err := net.ResolveUDPAddr("udp", dst)
+
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	defer conn.Close()
+
+	enc := gob.NewEncoder(conn)
+
+	err = enc.Encode(packet)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 }
 
-func (s *AddService) GetSuccessor(args *AddArgs, reply *AddReply) {
-	reply.Id = s.app.node.finger[0].node.nodeId
-	reply.Ip = s.app.node.finger[0].node.ip
-	reply.Port = s.app.node.finger[0].node.port
+func (t *Transport) sendMsg(dst, msgId string, data []byte) {
+	packet := Packet{t.bindAddress, &Msg{msgId, data}, nil, nil}
+	t.sendPacket(dst, packet)
 }
 
-func (s *AddService) GetPredecessor(args *AddArgs, reply *AddReply) {
-	if s.app.node.predecessor != nil {
-		reply.Id = s.app.node.predecessor.nodeId
-		reply.Ip = s.app.node.predecessor.ip
-		reply.Port = s.app.node.predecessor.port
+// Blocks until either a reply is retrieved or the request times out
+func (t *Transport) sendRequest(dst, msgId string, data []byte) *Reply {
+	t.lock.Lock()
+
+	packet := Packet{t.bindAddress, nil, &Request{t.lastReqSN, msgId, data}, nil}
+	pr := PendingRequest{make(chan Reply)}
+
+	t.sentRequests[t.lastReqSN] = &pr
+	t.lastReqSN++
+
+	t.lock.Unlock()
+	t.sendPacket(dst, packet)
+
+	timeout := time.NewTimer(time.Second * time_out)
+	select {
+		case <- timeout.C:
+			return nil
+		case reply := <- pr.channel:
+			return &reply
 	}
-}
-
-func (s *AddService) Notify(args *AddArgs, reply *AddReply) {
-	extNode := new(ExternalNode)
-	extNode.nodeId = args.Id
-	extNode.ip = args.Ip
-	extNode.port = args.Port
-	s.app.node.notify(extNode)
-}
-
-func (s *AddService) InsertKey(args *AddArgs, reply *AddReply) {
-	s.app.node.mutex.Lock()
-	defer s.app.node.mutex.Unlock()
-
-	s.app.node.keys[args.Key] = args.Value
-}
-
-func (s *AddService) DeleteKey(args *AddArgs, reply *AddReply) {
-	_, ok := s.app.node.keys[args.Key]
-	if ok {
-		s.app.node.mutex.Lock()
-		defer s.app.node.mutex.Unlock()
-
-		delete(s.app.node.keys, args.Key)
-		reply.WasDeleted = 1
-	} else {
-		reply.WasDeleted = 0
-	}
-}
-
-func (s *AddService) GetKey(args *AddArgs, reply *AddReply) {
-	_, ok := s.app.node.keys[args.Key]
-	if ok {
-		reply.Value = s.app.node.keys[args.Key]
-	}
-}
-
-func (s *AddService) UpdateKey(args *AddArgs, reply *AddReply) {
-	_, ok := s.app.node.keys[args.Key]
-	if ok {
-		s.app.node.keys[args.Key] = args.Value
-		reply.WasUpdated = 1
-	} else {
-		reply.WasUpdated = 0
-	}
-}
-
-func (s *AddService) Ping(args *AddArgs, reply *AddReply) {
-
 }
