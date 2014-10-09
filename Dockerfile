@@ -1,11 +1,11 @@
 FROM google/golang
 
-WORKDIR /gopath/src/github.com/simeks/D7024E
-ADD . /gopath/src/github.com/simeks/D7024E/
+WORKDIR /gopath/src/github.com/simeks/d7024e
+ADD . /gopath/src/github.com/simeks/d7024e/
 
-RUN go get github.com\nu7hatch\gouuid
+RUN go get github.com/nu7hatch/gouuid
 
-RUN go get github.com/simeks/D7024E
+RUN go get github.com/simeks/d7024e
 
 CMD []
-ENTRYPOINT ["/gopath/bin/github.com/simeks/D7024E"]
+ENTRYPOINT ["/gopath/bin/d7024e"]
