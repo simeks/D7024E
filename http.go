@@ -1,9 +1,10 @@
 package main
 
 import (
-	//"bytes"
+	"bytes"
 	"fmt"
 	"net/http"
+	"encoding/json"
 )
 
 func chordHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func chordHandler(w http.ResponseWriter, r *http.Request) {
 		"<input type=\"submit\" value=\"Submit\">"+
 		"</form>")
 }
-/*
+
 func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	value := r.FormValue("insertvalue")
 	key := r.FormValue("insertkey")
@@ -47,22 +48,15 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
 		app.node.mutex.Lock()
 		defer app.node.mutex.Unlock()
-		app.node.keys[hashkey] = value
+		app.keyValue[hashkey] = value
 
 	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		args.Value = value
-		reply := new(AddReply)
+		req := KeyValueMsg{}
+		req.Key = hashkey
+		req.Value = value
 
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("InsertKey", addr, args, reply, time_out)
-
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
-			return
-		}
+		bytes, _ := json.Marshal(req)
+		app.transport.sendMsg(responsibleNode.addr, "insertKey", bytes)
 	}
 	fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 		"<p>Key/value pair inserted successfully!</p>")
@@ -76,12 +70,12 @@ func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	responsibleNode := app.lookup(hashkey)
 
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
-		_, ok := app.node.keys[hashkey]
+		_, ok := app.keyValue[hashkey]
 		if ok {
 			app.node.mutex.Lock()
 			defer app.node.mutex.Unlock()
 
-			delete(app.node.keys, hashkey)
+			delete(app.keyValue, hashkey)
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key deleted successfully!</p>")
 		} else {
@@ -89,21 +83,22 @@ func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 				"<p>Key was not found.</p>")
 		}
 	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		reply := new(AddReply)
+		req := KeyMsg{}
+		req.Key = hashkey
 
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("DeleteKey", addr, args, reply, time_out)
+		bytes, _ := json.Marshal(req)
+		r := app.transport.sendRequest(responsibleNode.addr, "deleteKey", bytes)
 
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
+		if r == nil {
+			fmt.Println("Call error (deleteKey)")
 			return
 		}
 
-		if reply != nil {
-			if reply.WasDeleted == 1 {
+		if r != nil {
+			reply := DeleteValueReply{}
+			json.Unmarshal(r.Data, &reply)
+			
+			if reply.Deleted {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 					"<p>Key deleted successfully!</p>")
 			} else {
@@ -121,35 +116,40 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	responsibleNode := app.lookup(hashkey)
 
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
-		_, ok := app.node.keys[hashkey]
+		_, ok := app.keyValue[hashkey]
 		if ok {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Value: "+app.node.keys[hashkey]+"</p>")
+				"<p>Value: "+app.keyValue[hashkey]+"</p>")
 		} else {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key was not found.</p>")
 		}
 	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		reply := new(AddReply)
+		req := KeyMsg{}
+		req.Key = hashkey
 
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("GetKey", addr, args, reply, time_out)
+		bytes, _ := json.Marshal(req)
+		r := app.transport.sendRequest(responsibleNode.addr, "getKey", bytes)
 
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
+
+		if r == nil {
+			fmt.Println("Call error (getKey)")
 			return
 		}
 
-		if reply != nil {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Value: "+reply.Value+"</p>")
-		} else {
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Key was not found.</p>")
-		}
+		if r != nil {
+			reply := ValueMsg{}
+			json.Unmarshal(r.Data, &reply)
+
+			if reply.Value != "" {
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>Value: "+reply.Value+"</p>")
+				return
+			}
+		} 
+		fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+			"<p>Key was not found.</p>")
+	
 	}
 }
 
@@ -161,9 +161,9 @@ func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	responsibleNode := app.lookup(hashkey)
 
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
-		_, ok := app.node.keys[hashkey]
+		_, ok := app.keyValue[hashkey]
 		if ok {
-			app.node.keys[hashkey] = value
+			app.keyValue[hashkey] = value
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Value updated successfully!</p>")
 		} else {
@@ -171,22 +171,23 @@ func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
 				"<p>Key was not found.</p>")
 		}
 	} else {
-		args := new(AddArgs)
-		args.Key = hashkey
-		args.Value = value
-		reply := new(AddReply)
+		req := KeyValueMsg{}
+		req.Key = hashkey
+		req.Value = value
 
-		addr := responsibleNode.ip + ":" + responsibleNode.port
-		err := app.nodeUDP.CallUDP("UpdateKey", addr, args, reply, time_out)
+		bytes, _ := json.Marshal(req)
+		r := app.transport.sendRequest(responsibleNode.addr, "updateKey", bytes)
 
-		if err != nil {
-			fmt.Print("Call error - ")
-			fmt.Println(err.Error())
+		if r == nil {
+			fmt.Println("Call error (updateKey)")
 			return
 		}
 
-		if reply != nil {
-			if reply.WasUpdated == 1 {
+		if r != nil {
+			reply := UpdateValueReply{}
+			json.Unmarshal(r.Data, &reply)
+
+			if reply.Updated {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 					"<p>Value updated successfully!</p>")
 			} else {
@@ -196,4 +197,3 @@ func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
 		}
 	}
 }
-*/

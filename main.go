@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"net/http"
+	"net/http"
 	"os"
 )
 
@@ -26,7 +26,7 @@ func main() {
 		go app.join(remote)
 	}
 
-/*
+
 	go func() {
 		http.HandleFunc("/chord/", chordHandler)
 		http.HandleFunc("/post/", func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +43,7 @@ func main() {
 		})
 		http.ListenAndServe(":"+port, nil)
 	}()
-	*/
+	
 
 	app.listen()
 
