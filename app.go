@@ -316,10 +316,6 @@ func (this *App) sendPing() {
 		}
 	}
 
-	////////////////
-	// We always need a successor to be set.
-	/////////////
-
 	for i := 0; i < num_bits; i++ {
 		finger := this.node.finger[i].node
 		if finger != nil {
@@ -328,8 +324,14 @@ func (this *App) sendPing() {
 			if r == nil {
 				// Finger[i] has timed out
 				fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
-				this.node.finger[i].node = nil
+				if i == 0 {
+					// We always need a successor to be set.
+					this.node.finger[i].node = &ExternalNode{this.node.nodeId, this.node.addr}
+				} else {
+					this.node.finger[i].node = nil
+				}
 			}
 		}
 	}
+
 }
