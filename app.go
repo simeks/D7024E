@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 	"encoding/json"
+	"strconv"
 )
 
 type App struct {
@@ -305,34 +306,30 @@ func (this *App) listen() {
 
 
 func (this *App) sendPing() {
-	/*
-	args := new(AddArgs)
-	reply := new(AddReply)
-	args.Id = this.node.nodeId
-
 	if this.node.predecessor != nil {
-
-		//err := this.nodeUDP.CallUDP("Ping", this.node.predecessor.addr, args, reply, 3)
+		r := this.transport.sendRequest(this.node.predecessor.addr, "ping", []byte{})
 		
-		//if err != nil {
+		if r == nil {
 			// Predecessor has timed out
-		//	fmt.Println("Predecessor has timed out")
-		//	this.node.predecessor = nil
-		//}
+			fmt.Println("Predecessor has timed out")
+			this.node.predecessor = nil
+		}
 	}
+
+	////////////////
+	// We always need a successor to be set.
+	/////////////
 
 	for i := 0; i < num_bits; i++ {
 		finger := this.node.finger[i].node
 		if finger != nil {
+			r := this.transport.sendRequest(finger.addr, "ping", []byte{})
 
-			//err := this.nodeUDP.CallUDP("Ping", finger.addr, args, reply, 3)
-
-			//if err != nil {
+			if r == nil {
 				// Finger[i] has timed out
-			//	fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
-			//	this.node.finger[i].node = nil
-			//}
+				fmt.Println("finger[" + strconv.Itoa(i) + "] has timed out")
+				this.node.finger[i].node = nil
+			}
 		}
 	}
-	*/
 }
