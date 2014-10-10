@@ -54,6 +54,10 @@ type FindNodeReply struct {
 	Found bool
 }
 
+type TransferDataMsg struct {
+	KeyValue map[string]string
+}
+
 type Net struct {
 	app *App
 }
@@ -232,4 +236,11 @@ func (n *Net) closestPrecedingFinger(rc *RequestContext) {
 
 	bytes, _ := json.Marshal(reply)
 	rc.replyChan <- bytes
+}
+
+func (n *Net) transferData(msg *Msg) {
+	m := TransferDataMsg{}
+	json.Unmarshal(msg.Data, &m)
+
+	n.app.transferData(&m.KeyValue)
 }

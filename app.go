@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -17,6 +16,7 @@ type App struct {
 
 	keyValue map[string]string
 }
+
 
 func (this *App) init(bindAddr string) {
 	this.keyValue = make(map[string]string)
@@ -34,34 +34,60 @@ func (this *App) init(bindAddr string) {
 				this.stabilize()
 				this.fixFingers()
 
-				fmt.Println("Node: ", hex.EncodeToString(this.node.nodeId))
-				fmt.Println("Successor: ", hex.EncodeToString(this.node.finger[0].node.nodeId))
+				fmt.Println("Node: ", idToString(this.node.nodeId))
+				fmt.Println("Successor: ", idToString(this.node.finger[0].node.nodeId))
 				if this.node.predecessor != nil {
-					fmt.Println("Predecessor: ", hex.EncodeToString(this.node.predecessor.nodeId))
+					fmt.Println("Predecessor: ", idToString(this.node.predecessor.nodeId))
 				}
 
-				fmt.Println("Keys: ")
-				for x := range this.keyValue {
-					fmt.Println(x)
+				tmp := make(map[string]string)
+				for k, v := range this.keyValue {
+					tmp[k] = v
+				}
+
+				fmt.Println("Key:Value (Owned by me): ")
+				for k, v := range tmp {
+					if this.node.predecessor == nil || between(this.node.predecessor .nodeId, this.node.nodeId, stringToId(k)) {
+						fmt.Println(k,":",v)
+						delete(tmp, k)
+					}
+				}
+				fmt.Println("")
+				fmt.Println("Key:Value (Backed up from predecessor)")
+				for k, v := range tmp {
+					fmt.Println(k,":",v)
+					delete(tmp, k)
 				}
 				fmt.Println("")
 
+
 				//// check what the 80th finger is
 				//if this.node.finger[79].node != nil {
-				//	fmt.Println("80th finger: ", hex.EncodeToString(this.node.finger[79].node.nodeId))
+				//	fmt.Println("80th finger: ", idToString(this.node.finger[79].node.nodeId))
 				//}
 
 				//// check what the 120th finger is
 				//if this.node.finger[119].node != nil {
-				//	fmt.Println("120th finger: ", hex.EncodeToString(this.node.finger[119].node.nodeId))
+				//	fmt.Println("120th finger: ", idToString(this.node.finger[119].node.nodeId))
 				//}
 
 				//// check what the 160th finger is
 				//if this.node.finger[159].node != nil {
-				//	fmt.Println("160th finger: ", hex.EncodeToString(this.node.finger[159].node.nodeId))
+				//	fmt.Println("160th finger: ", idToString(this.node.finger[159].node.nodeId))
 				//}
 
 				//fmt.Println("")
+			}
+		}
+	}()
+
+	// Check data
+	go func() {
+		c := time.Tick(5 * time.Second)
+		for {
+			select {
+			case <-c:
+				this.updateKeyValue()
 			}
 		}
 	}()
@@ -210,6 +236,9 @@ func (this *App) listen() {
 				case "insertKey":
 					go this.net.insertKey(msg)
 					break
+				case "transferData":
+					go this.net.transferData(msg)
+					break
 				}
 			case req := <- reqChan:
 				switch req.req.Id {
@@ -294,26 +323,57 @@ func (this *App) notify(np *ExternalNode) {
 }
 
 func (this *App) updateKeyValue() {
-	/*
-	* 
-	* (predecessor, this] - My values
-	*/
+	// Filter out values not belonging to this node
+	//	meaning values not in range (predecessor.predecessor, thisNode]
 
-	//for k, v := range this.keyValue {
+	p := this.node.predecessor
+	var pp *ExternalNode = nil
 
-	//}
+	if p != nil {
+		pp = p.getPredecessor(&this.transport)
+	}
+
+	for k, _ := range this.keyValue {
+		if pp != nil && between(pp.nodeId, this.node.nodeId, stringToId(k)) == false {
+			delete(this.keyValue, k)
+		}
+	}	
+
+	// Send backup to our successor
+	// Only use the data belonging to this node
+	kv := make(map[string]string)
+	for k, v := range this.keyValue {
+		// (predecessor, this] - My values
+		if p == nil || between(p.nodeId, this.node.nodeId, stringToId(k)) {
+			kv[k] = v
+		}
+	}
+
+	s := this.node.finger[0].node
+	s.transferData(&this.transport, &kv)
 }
 
 func (this *App) changeSuccessor(n *ExternalNode) {
-	/*
-	- Notify successor about 
-	*/
-
 	this.node.finger[0].node = n
 }
 
 func (this *App) changePredecessor(n *ExternalNode) {
-	// If the predecessor 
-
 	this.node.predecessor = n
 }
+
+func (this *App) transferData(kv *map[string]string) {
+	// Filter out data not belonging to this node
+	for k, _ := range this.keyValue {
+		// (predecessor, this] - My values
+		if this.node.predecessor != nil && between(this.node.predecessor.nodeId, this.node.nodeId, stringToId(k)) == false {
+			delete(this.keyValue, k)
+			continue	
+		}
+	}
+
+	// Add new values
+	for k, v := range *kv {
+		this.keyValue[k] = v
+	}
+}
+

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math/big"
 	"sync"
 	"encoding/json"
 	"fmt"
@@ -33,9 +32,7 @@ func makeDHTNode(id *string, addr string) *Node {
 		id = &idStr
 	}
 
-	x := big.Int{}
-	x.SetString(*id, 16)
-	idBytes := x.Bytes()
+	idBytes := stringToId(*id)
 
 	externalNode := new(ExternalNode)
 	externalNode.nodeId = idBytes
@@ -201,6 +198,12 @@ func (n *ExternalNode) closestPrecedingFinger(t *Transport, id []byte) *External
 	return nil
 }
 
+func (n *ExternalNode) transferData(t *Transport, kv *map[string]string) {
+	msg := TransferDataMsg{}
+	msg.KeyValue = *kv
 
+	bytes, _ := json.Marshal(msg)
+	t.sendMsg(n.addr, "transferData", bytes)	
+}
 
 

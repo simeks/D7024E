@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/nu7hatch/gouuid"
 	"math/big"
+	"encoding/hex"
 )
 
 func distance(a, b []byte, bits int) *big.Int {
@@ -150,4 +151,15 @@ func sha1hash(str string) string {
 	hasher.Write([]byte(str))
 
 	return fmt.Sprintf("%x", hasher.Sum(nil))
+}
+
+func idToString(id []byte) string {
+	return hex.EncodeToString(id)
+}
+
+func stringToId(s string) []byte {
+	x := big.Int{}
+	x.SetString(s, 16)
+
+	return x.Bytes()
 }
