@@ -1,22 +1,21 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
-	"time"
-	"encoding/json"
 	"strconv"
+	"time"
 )
 
 type App struct {
-	node    *Node
+	node      *Node
 	transport Transport
-	net Net
+	net       Net
 
 	keyValue map[string]string
 }
-
 
 func (this *App) init(bindAddr string) {
 	this.keyValue = make(map[string]string)
@@ -47,19 +46,18 @@ func (this *App) init(bindAddr string) {
 
 				fmt.Println("Key:Value (Owned by me): ")
 				for k, v := range tmp {
-					if this.node.predecessor == nil || between(this.node.predecessor .nodeId, this.node.nodeId, stringToId(k)) {
-						fmt.Println(k,":",v)
+					if this.node.predecessor == nil || between(this.node.predecessor.nodeId, this.node.nodeId, stringToId(k)) {
+						fmt.Println(k, ":", v)
 						delete(tmp, k)
 					}
 				}
 				fmt.Println("")
 				fmt.Println("Key:Value (Backed up from predecessor)")
 				for k, v := range tmp {
-					fmt.Println(k,":",v)
+					fmt.Println(k, ":", v)
 					delete(tmp, k)
 				}
 				fmt.Println("")
-
 
 				//// check what the 80th finger is
 				//if this.node.finger[79].node != nil {
@@ -104,7 +102,6 @@ func (this *App) init(bindAddr string) {
 	}()
 }
 
-
 //Tries to join the node at the specified address.
 func (this *App) join(addr string) {
 	req := JoinRequest{}
@@ -132,7 +129,7 @@ func (this *App) join(addr string) {
 		// extNode is already in the ring
 		this.addToRing(&extNode)
 	}
-	
+
 }
 
 func (this *App) addToRing(np *ExternalNode) {
@@ -228,51 +225,51 @@ func (this *App) listen() {
 
 	for {
 		select {
-			case msg := <- msgChan:
-				switch msg.Id {
-				case "notify":
-					go this.net.notify(msg)
-					break
-				case "insertKey":
-					go this.net.insertKey(msg)
-					break
-				case "transferData":
-					go this.net.transferData(msg)
-					break
-				}
-			case req := <- reqChan:
-				switch req.req.Id {
-				case "join":
-					go this.net.join(req)
-					break
-				case "findSuccessor":
-					go this.net.findSuccessor(req)
-					break
-				case "findPredecessor":
-					go this.net.findPredecessor(req)
-					break
-				case "getSuccessor":
-					go this.net.getSuccessor(req)
-					break
-				case "getPredecessor":
-					go this.net.getPredecessor(req)
-					break
-				case "getKey":
-					go this.net.getKey(req)
-					break
-				case "deleteKey":
-					go this.net.deleteKey(req)
-					break
-				case "updateKey":
-					go this.net.updateKey(req)
-					break
-				case "ping":
-					go this.net.ping(req)
-					break
-				case "closestPrecedingFinger":
-					go this.net.closestPrecedingFinger(req)
-					break
-				}				
+		case msg := <-msgChan:
+			switch msg.Id {
+			case "notify":
+				go this.net.notify(msg)
+				break
+			case "insertKey":
+				go this.net.insertKey(msg)
+				break
+			case "transferData":
+				go this.net.transferData(msg)
+				break
+			}
+		case req := <-reqChan:
+			switch req.req.Id {
+			case "join":
+				go this.net.join(req)
+				break
+			case "findSuccessor":
+				go this.net.findSuccessor(req)
+				break
+			case "findPredecessor":
+				go this.net.findPredecessor(req)
+				break
+			case "getSuccessor":
+				go this.net.getSuccessor(req)
+				break
+			case "getPredecessor":
+				go this.net.getPredecessor(req)
+				break
+			case "getKey":
+				go this.net.getKey(req)
+				break
+			case "deleteKey":
+				go this.net.deleteKey(req)
+				break
+			case "updateKey":
+				go this.net.updateKey(req)
+				break
+			case "ping":
+				go this.net.ping(req)
+				break
+			case "closestPrecedingFinger":
+				go this.net.closestPrecedingFinger(req)
+				break
+			}
 
 		}
 	}
@@ -296,11 +293,10 @@ func (this *App) pingFinger(i int) {
 	}
 }
 
-
 func (this *App) sendPing() {
 	if this.node.predecessor != nil {
 		r := this.transport.sendRequest(this.node.predecessor.addr, "ping", []byte{})
-		
+
 		if r == nil {
 			// Predecessor has timed out
 			fmt.Println("Predecessor has timed out")
@@ -314,11 +310,15 @@ func (this *App) sendPing() {
 
 }
 
-
 // np thinks it might be our predecessor.
 func (this *App) notify(np *ExternalNode) {
 	if this.node.predecessor == nil || between3(this.node.predecessor.nodeId, this.node.nodeId, np.nodeId) {
 		this.changePredecessor(np)
+
+		// Send our keys to the new predecessor
+		p := this.node.predecessor
+		p.transferData(&this.transport, &this.keyValue)
+
 	}
 }
 
@@ -337,7 +337,7 @@ func (this *App) updateKeyValue() {
 		if pp != nil && between(pp.nodeId, this.node.nodeId, stringToId(k)) == false {
 			delete(this.keyValue, k)
 		}
-	}	
+	}
 
 	// Send backup to our successor
 	// Only use the data belonging to this node
@@ -367,7 +367,7 @@ func (this *App) transferData(kv *map[string]string) {
 		// (predecessor, this] - My values
 		if this.node.predecessor != nil && between(this.node.predecessor.nodeId, this.node.nodeId, stringToId(k)) == false {
 			delete(this.keyValue, k)
-			continue	
+			continue
 		}
 	}
 
@@ -376,4 +376,3 @@ func (this *App) transferData(kv *map[string]string) {
 		this.keyValue[k] = v
 	}
 }
-
