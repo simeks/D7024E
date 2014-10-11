@@ -315,9 +315,16 @@ func (this *App) notify(np *ExternalNode) {
 	if this.node.predecessor == nil || between3(this.node.predecessor.nodeId, this.node.nodeId, np.nodeId) {
 		this.changePredecessor(np)
 
-		// Send our keys to the new predecessor
+		// Send keys to the new predecessor
 		p := this.node.predecessor
-		p.transferData(&this.transport, &this.keyValue)
+		kv := make(map[string]string)
+		for k, v := range this.keyValue {
+			// (predecessor, this] - My values, dont send them
+			if !between(p.nodeId, this.node.nodeId, stringToId(k)) {
+				kv[k] = v
+			}
+		}
+		p.transferData(&this.transport, &kv)
 
 	}
 }
