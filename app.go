@@ -35,15 +35,11 @@ func (this *App) init(bindAddr string) {
 			case <-c:
 				fmt.Println("Node: ", idToString(this.node.nodeId))
 				for i := range this.node.successorList {
-					if this.node.successorList[i] != nil {
-						fmt.Println("Successor["+strconv.Itoa(i)+"]: ", idToString(this.node.successorList[i].nodeId))
-					}
+					fmt.Println("Successor["+strconv.Itoa(i)+"]: ", idToString(this.node.successorList[i].nodeId))
 				}
-
-				//fmt.Println("Successors: ", idToString(this.node.finger[0].node.nodeId))
-				//if this.node.predecessor != nil {
-				//	fmt.Println("Predecessor: ", idToString(this.node.predecessor.nodeId))
-				//}
+				if this.node.predecessor != nil {
+					fmt.Println("Predecessor: ", idToString(this.node.predecessor.nodeId))
+				}
 
 				tmp := make(map[string]string)
 				for k, v := range this.keyValue {
@@ -406,16 +402,29 @@ func (this *App) updateKeyValue() {
 }
 
 func (this *App) fillSuccessorList(succList *[num_successors]*ExternalNode) {
-	for i := 1; i < num_successors; i++ {
-		this.node.successorList[i] = succList[i-1]
+	if succList != nil {
+		for i := 1; i < num_successors; i++ {
+			this.node.successorList[i] = succList[i-1]
+		}
 	}
 }
 
 func (this *App) fixSuccessorList(n *ExternalNode) {
-	for i := num_successors - 1; i > 0; i-- {
-		this.node.successorList[i] = this.node.successorList[i-1]
+	// a node left
+	if n == this.node.successorList[1] {
+		for i := 0; i < num_successors-1; i++ {
+			this.node.successorList[i] = this.node.successorList[i+1]
+		}
+		s := this.node.successorList[num_successors-2].getSuccessor(&this.transport)
+		if s != nil {
+			this.node.successorList[num_successors-1] = s
+		}
+	} else { // a node joined
+		for i := num_successors - 1; i > 0; i-- {
+			this.node.successorList[i] = this.node.successorList[i-1]
+		}
+		this.node.successorList[0] = n
 	}
-	this.node.successorList[0] = n
 }
 
 func (this *App) changeSuccessor(n *ExternalNode) {
@@ -443,6 +452,9 @@ func (this *App) transferData(kv *map[string]string) {
 }
 
 func (this *App) updateSuccessorList() {
+	this.node.mutex.Lock()
+	defer this.node.mutex.Unlock()
+
 	if this.node.finger[0].node == nil {
 		fmt.Println("Could not join ring: Successor not found.")
 	}
