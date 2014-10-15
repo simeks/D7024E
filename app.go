@@ -24,20 +24,26 @@ func (this *App) init(bindAddr string) {
 	this.transport.init(bindAddr)
 	this.net = Net{this}
 
-	// call stabilize and fixFingers periodically
+	for i := range this.node.successorList {
+		this.node.successorList[i] = &ExternalNode{this.node.nodeId, this.node.addr}
+	}
+
 	go func() {
 		c := time.Tick(3 * time.Second)
 		for {
 			select {
 			case <-c:
-				this.stabilize()
-				this.fixFingers()
-
 				fmt.Println("Node: ", idToString(this.node.nodeId))
-				fmt.Println("Successor: ", idToString(this.node.finger[0].node.nodeId))
-				if this.node.predecessor != nil {
-					fmt.Println("Predecessor: ", idToString(this.node.predecessor.nodeId))
+				for i := range this.node.successorList {
+					if this.node.successorList[i] != nil {
+						fmt.Println("Successor["+strconv.Itoa(i)+"]: ", idToString(this.node.successorList[i].nodeId))
+					}
 				}
+
+				//fmt.Println("Successors: ", idToString(this.node.finger[0].node.nodeId))
+				//if this.node.predecessor != nil {
+				//	fmt.Println("Predecessor: ", idToString(this.node.predecessor.nodeId))
+				//}
 
 				tmp := make(map[string]string)
 				for k, v := range this.keyValue {
@@ -79,6 +85,28 @@ func (this *App) init(bindAddr string) {
 		}
 	}()
 
+	// call stabilize periodically
+	go func() {
+		c := time.Tick(3 * time.Second)
+		for {
+			select {
+			case <-c:
+				this.stabilize()
+			}
+		}
+	}()
+
+	// call fixFingers periodically
+	go func() {
+		c := time.Tick(5 * time.Second)
+		for {
+			select {
+			case <-c:
+				this.fixFingers()
+			}
+		}
+	}()
+
 	// Check data
 	go func() {
 		c := time.Tick(5 * time.Second)
@@ -97,6 +125,17 @@ func (this *App) init(bindAddr string) {
 			select {
 			case <-c:
 				this.sendPing()
+			}
+		}
+	}()
+
+	//
+	go func() {
+		c := time.Tick(3 * time.Second)
+		for {
+			select {
+			case <-c:
+				this.updateSuccessorList()
 			}
 		}
 	}()
@@ -140,11 +179,14 @@ func (this *App) addToRing(np *ExternalNode) {
 
 	req := FindNodeReq{}
 	req.Id = this.node.nodeId
-	this.changeSuccessor(np.findSuccessor(&this.transport, this.node.nodeId))
+	successor := np.findSuccessor(&this.transport, this.node.nodeId)
+	this.changeSuccessor(successor)
 
 	if this.node.finger[0].node == nil {
 		fmt.Println("Could not join ring: Successor not found.")
 	}
+	this.node.successorList[0] = successor
+	this.fillSuccessorList(successor.getSuccessorList(&this.transport))
 }
 
 func (this *App) findSuccessor(id []byte) *ExternalNode {
@@ -197,6 +239,7 @@ func (this *App) stabilize() {
 
 		if p != nil && between3(this.node.nodeId, successor.nodeId, p.nodeId) {
 			this.changeSuccessor(p)
+			this.fixSuccessorList(p)
 		}
 
 		successor.notify(&this.transport, &ExternalNode{this.node.nodeId, this.node.addr})
@@ -250,6 +293,9 @@ func (this *App) listen() {
 				break
 			case "getSuccessor":
 				go this.net.getSuccessor(req)
+				break
+			case "getSuccessorList":
+				go this.net.getSuccessorList(req)
 				break
 			case "getPredecessor":
 				go this.net.getPredecessor(req)
@@ -307,7 +353,6 @@ func (this *App) sendPing() {
 	for i := 0; i < num_bits; i++ {
 		go this.pingFinger(i)
 	}
-
 }
 
 // np thinks it might be our predecessor.
@@ -360,6 +405,19 @@ func (this *App) updateKeyValue() {
 	s.transferData(&this.transport, &kv)
 }
 
+func (this *App) fillSuccessorList(succList *[num_successors]*ExternalNode) {
+	for i := 1; i < num_successors; i++ {
+		this.node.successorList[i] = succList[i-1]
+	}
+}
+
+func (this *App) fixSuccessorList(n *ExternalNode) {
+	for i := num_successors - 1; i > 0; i-- {
+		this.node.successorList[i] = this.node.successorList[i-1]
+	}
+	this.node.successorList[0] = n
+}
+
 func (this *App) changeSuccessor(n *ExternalNode) {
 	this.node.finger[0].node = n
 }
@@ -382,4 +440,12 @@ func (this *App) transferData(kv *map[string]string) {
 	for k, v := range *kv {
 		this.keyValue[k] = v
 	}
+}
+
+func (this *App) updateSuccessorList() {
+	if this.node.finger[0].node == nil {
+		fmt.Println("Could not join ring: Successor not found.")
+	}
+	this.node.successorList[0] = this.node.finger[0].node
+	this.fillSuccessorList(this.node.finger[0].node.getSuccessorList(&this.transport))
 }

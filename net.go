@@ -5,10 +5,9 @@ import (
 	"fmt"
 )
 
-
 type NotifyMsg struct {
 	NodeId []byte
-	Addr     string
+	Addr   string
 }
 
 // insertKey, updateKey
@@ -32,10 +31,9 @@ type UpdateValueReply struct {
 	Updated bool
 }
 
-
 type JoinRequest struct {
 	Addr string
-	Id []byte
+	Id   []byte
 }
 
 type JoinReply struct {
@@ -49,9 +47,14 @@ type FindNodeReq struct {
 
 // findSuccessor, findPredecessor, getSuccessor, getPredecessor
 type FindNodeReply struct {
-	Id []byte
-	Addr string
+	Id    []byte
+	Addr  string
 	Found bool
+}
+
+type SuccessorListReply struct {
+	Id   [num_successors][]byte
+	Addr [num_successors]string
 }
 
 type TransferDataMsg struct {
@@ -61,7 +64,6 @@ type TransferDataMsg struct {
 type Net struct {
 	app *App
 }
-
 
 func (n *Net) notify(msg *Msg) {
 	m := NotifyMsg{}
@@ -76,7 +78,7 @@ func (n *Net) insertKey(msg *Msg) {
 	json.Unmarshal(msg.Data, &m)
 
 	n.app.keyValue[m.Key] = m.Value
-	
+
 }
 
 func (n *Net) getKey(rc *RequestContext) {
@@ -97,7 +99,7 @@ func (n *Net) getKey(rc *RequestContext) {
 func (n *Net) deleteKey(rc *RequestContext) {
 	r := KeyMsg{}
 	json.Unmarshal(rc.req.Data, &r)
-	
+
 	reply := DeleteValueReply{}
 
 	_, ok := n.app.keyValue[r.Key]
@@ -106,7 +108,7 @@ func (n *Net) deleteKey(rc *RequestContext) {
 		reply.Deleted = true
 	} else {
 		reply.Deleted = false
-	}	
+	}
 
 	bytes, _ := json.Marshal(reply)
 	rc.replyChan <- bytes
@@ -115,8 +117,8 @@ func (n *Net) deleteKey(rc *RequestContext) {
 func (n *Net) updateKey(rc *RequestContext) {
 	r := KeyValueMsg{}
 	json.Unmarshal(rc.req.Data, &r)
-	
-	reply := UpdateValueReply{}	
+
+	reply := UpdateValueReply{}
 
 	_, ok := n.app.keyValue[r.Key]
 	if ok {
@@ -129,8 +131,6 @@ func (n *Net) updateKey(rc *RequestContext) {
 	bytes, _ := json.Marshal(reply)
 	rc.replyChan <- bytes
 }
-
-
 
 func (n *Net) ping(rc *RequestContext) {
 	rc.replyChan <- []byte{}
@@ -196,6 +196,19 @@ func (n *Net) getSuccessor(rc *RequestContext) {
 		reply.Found = true
 	} else {
 		reply.Found = false
+	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
+}
+
+func (n *Net) getSuccessorList(rc *RequestContext) {
+	succList := n.app.node.successorList
+
+	reply := SuccessorListReply{}
+	for i := 0; i < num_successors; i++ {
+		reply.Id[i] = succList[i].nodeId
+		reply.Addr[i] = succList[i].addr
 	}
 
 	bytes, _ := json.Marshal(reply)

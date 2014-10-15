@@ -1,12 +1,13 @@
 package main
 
 import (
-	"sync"
 	"encoding/json"
 	"fmt"
+	"sync"
 )
 
 const num_bits int = 160
+const num_successors int = 6
 
 type Finger struct {
 	node  *ExternalNode
@@ -14,11 +15,12 @@ type Finger struct {
 }
 
 type Node struct {
-	nodeId      []byte
-	addr        string
-	finger      [num_bits]Finger
-	predecessor *ExternalNode
-	mutex       sync.Mutex
+	nodeId        []byte
+	addr          string
+	finger        [num_bits]Finger
+	predecessor   *ExternalNode
+	successorList [num_successors]*ExternalNode
+	mutex         sync.Mutex
 }
 
 type ExternalNode struct {
@@ -72,7 +74,7 @@ func (n *ExternalNode) findSuccessor(t *Transport, id []byte) *ExternalNode {
 
 	// call FindSuccessor on np, which is already in the ring
 	bytes, _ := json.Marshal(req)
-	r := t.sendRequest(n.addr, "findSuccessor", bytes)	
+	r := t.sendRequest(n.addr, "findSuccessor", bytes)
 	if r == nil {
 		fmt.Println("Call error (findSuccessor)")
 		return nil
@@ -141,6 +143,30 @@ func (n *ExternalNode) getSuccessor(t *Transport) *ExternalNode {
 	return nil
 }
 
+func (n *ExternalNode) getSuccessorList(t *Transport) *[num_successors]*ExternalNode {
+	r := t.sendRequest(n.addr, "getSuccessorList", []byte{})
+	if r == nil {
+		fmt.Println("Call error (getSuccessorList)")
+		return nil
+	}
+
+	if r != nil {
+		reply := SuccessorListReply{}
+		json.Unmarshal(r.Data, &reply)
+
+		succlist := new([num_successors]*ExternalNode)
+
+		for i := 0; i < num_successors; i++ {
+			extNode := new(ExternalNode)
+			extNode.nodeId = reply.Id[i]
+			extNode.addr = reply.Addr[i]
+			succlist[i] = extNode
+		}
+		return succlist
+	}
+	return nil
+}
+
 func (n *ExternalNode) getPredecessor(t *Transport) *ExternalNode {
 	r := t.sendRequest(n.addr, "getPredecessor", []byte{})
 	if r == nil {
@@ -159,7 +185,7 @@ func (n *ExternalNode) getPredecessor(t *Transport) *ExternalNode {
 
 			return extNode
 		}
-	}	
+	}
 	return nil
 }
 
@@ -203,7 +229,5 @@ func (n *ExternalNode) transferData(t *Transport, kv *map[string]string) {
 	msg.KeyValue = *kv
 
 	bytes, _ := json.Marshal(msg)
-	t.sendMsg(n.addr, "transferData", bytes)	
+	t.sendMsg(n.addr, "transferData", bytes)
 }
-
-
