@@ -410,8 +410,11 @@ func (this *App) fillSuccessorList(succList *[num_successors]*ExternalNode) {
 }
 
 func (this *App) fixSuccessorList(n *ExternalNode) {
+	prevDist := distance(this.node.nodeId, this.node.successorList[0].nodeId, num_bits)
+	newDist := distance(this.node.nodeId, this.node.successorList[0].nodeId, num_bits)
+
 	// a node left
-	if n == this.node.successorList[1] {
+	if newDist.Cmp(prevDist) == 1 {
 		for i := 0; i < num_successors-1; i++ {
 			this.node.successorList[i] = this.node.successorList[i+1]
 		}
