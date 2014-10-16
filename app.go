@@ -83,7 +83,7 @@ func (this *App) init(bindAddr string) {
 
 	// call stabilize periodically
 	go func() {
-		c := time.Tick(3 * time.Second)
+		c := time.Tick(500 * time.Millisecond)
 		for {
 			select {
 			case <-c:
@@ -94,7 +94,7 @@ func (this *App) init(bindAddr string) {
 
 	// call fixFingers periodically
 	go func() {
-		c := time.Tick(5 * time.Second)
+		c := time.Tick(3 * time.Second)
 		for {
 			select {
 			case <-c:
@@ -127,7 +127,7 @@ func (this *App) init(bindAddr string) {
 
 	//
 	go func() {
-		c := time.Tick(3 * time.Second)
+		c := time.Tick(2 * time.Second)
 		for {
 			select {
 			case <-c:
@@ -410,11 +410,11 @@ func (this *App) fillSuccessorList(succList *[num_successors]*ExternalNode) {
 }
 
 func (this *App) fixSuccessorList(n *ExternalNode) {
-	prevDist := distance(this.node.nodeId, this.node.successorList[0].nodeId, num_bits)
-	newDist := distance(this.node.nodeId, this.node.successorList[0].nodeId, num_bits)
+	prevDist := distance(this.node.nodeId, this.node.successorList[0].nodeId, num_bits) // distance to previous successor
+	newDist := distance(this.node.nodeId, n.nodeId, num_bits)                           // distance to new successor
 
 	// a node left
-	if newDist.Cmp(prevDist) == 1 {
+	if newDist.Cmp(prevDist) == 1 { // if newDist > prevDist
 		for i := 0; i < num_successors-1; i++ {
 			this.node.successorList[i] = this.node.successorList[i+1]
 		}
@@ -458,9 +458,6 @@ func (this *App) updateSuccessorList() {
 	this.node.mutex.Lock()
 	defer this.node.mutex.Unlock()
 
-	if this.node.finger[0].node == nil {
-		fmt.Println("Could not join ring: Successor not found.")
-	}
 	this.node.successorList[0] = this.node.finger[0].node
 	this.fillSuccessorList(this.node.finger[0].node.getSuccessorList(&this.transport))
 }
