@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"math/big"
 )
 
 // test cases can be run by calling e.g. go test -test.run TestRingSetup
@@ -53,11 +54,36 @@ func TestRingSetup(t *testing.T) {
 	node3.addToRing(node8)
 	node7.addToRing(node9)
 
+
+	for i := 0; i < 10; i++ {
+		node1.stabilize()
+		node2.stabilize()
+		node3.stabilize()
+		node4.stabilize()
+		node5.stabilize()
+		node6.stabilize()
+		node7.stabilize()
+		node8.stabilize()
+		node9.stabilize()
+	}
+	for i := 0; i < 10; i++ {
+		node1.fixFingers()
+		node2.fixFingers()
+		node3.fixFingers()
+		node4.fixFingers()
+		node5.fixFingers()
+		node6.fixFingers()
+		node7.fixFingers()
+		node8.fixFingers()
+		node9.fixFingers()
+	}
+
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	fmt.Println("RING STRUCTURE")
 	fmt.Println("------------------------------------------------------------------------------------------------")
 	node1.printRing()
 	fmt.Println("------------------------------------------------------------------------------------------------")
+
 }
 
 /*
@@ -126,6 +152,7 @@ func TestLookup(t *testing.T) {
 	fmt.Println("node 5: " + hex.EncodeToString(node5.lookup(hashKey).nodeId) + " is respoinsible for " + hashKey)
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
+
 
 }
 
@@ -224,11 +251,84 @@ func TestFinger3bits(t *testing.T) {
 
 	fmt.Println("------------------------------------------------------------------------------------------------")
 
-	node3.testCalcFingers(1, 3)
-	fmt.Println("")
-	node3.testCalcFingers(2, 3)
-	fmt.Println("")
-	node3.testCalcFingers(3, 3)
+	/* 
+	 * n            0
+	 * k            1
+	 * m            3
+	 * 2^(k-1)      1
+	 * (n+2^(k-1))  1
+	 * 2^m          8
+	 * result       1
+	 * result (hex) 01
+	 * successor    01
+	 * distance     1
+	 */
+	k := 1
+	m := 3
+	a, b, c, r, d, rh, s := node0.testCalcFingers(k, m)
+	if 	a.Cmp(big.NewInt(1)) != 0 || // 2^(k-1)  
+		b.Cmp(big.NewInt(1)) != 0 || // (n+2^(k-1)) 
+		c.Cmp(big.NewInt(8)) != 0 || // 2^m 
+		r.Cmp(big.NewInt(1)) != 0 || // result 
+		rh != "01" || // result (hex)
+		s != "01" || // successor
+		d.Cmp(big.NewInt(1)) != 0 { // distance
+
+		t.Errorf("Finger k=%d failed (a=%s, b=%s, c=%s, r=%s, rh=%s, s=%s, d=%s)",k,a.String(),b.String(),c.String(),r.String(),rh,s,d.String())
+	} 
+
+	/* 
+	 * n            0
+	 * k            2
+	 * m            3
+	 * 2^(k-1)      2
+	 * (n+2^(k-1))  2
+	 * 2^m          8
+	 * result       2
+	 * result (hex) 02
+	 * successor    02
+	 * distance     2
+	 */	
+	k = 2
+	m = 3
+	a, b, c, r, d, rh, s = node0.testCalcFingers(k, m)
+	if 	a.Cmp(big.NewInt(2)) != 0 || // 2^(k-1)  
+		b.Cmp(big.NewInt(2)) != 0 || // (n+2^(k-1)) 
+		c.Cmp(big.NewInt(8)) != 0 || // 2^m 
+		r.Cmp(big.NewInt(2)) != 0 || // result 
+		rh != "02" || // result (hex)
+		s != "02" || // successor
+		d.Cmp(big.NewInt(2)) != 0 { // distance
+
+		t.Errorf("Finger k=%d failed (a=%s, b=%s, c=%s, r=%s, rh=%s, s=%s, d=%s)",k,a.String(),b.String(),c.String(),r.String(),rh,s,d.String())
+	} 
+
+	/* 
+	 * n            0
+	 * k            3
+	 * m            3
+	 * 2^(k-1)      4
+	 * (n+2^(k-1))  4
+	 * 2^m          8
+	 * result       4
+	 * result (hex) 04
+	 * successor    04
+	 * distance     4
+	 */	
+	k = 3
+	m = 3
+	a, b, c, r, d, rh, s = node0.testCalcFingers(k, m)
+	if 	a.Cmp(big.NewInt(4)) != 0 && // 2^(k-1)  
+		b.Cmp(big.NewInt(4)) != 0 && // (n+2^(k-1)) 
+		c.Cmp(big.NewInt(8)) != 0 && // 2^m 
+		r.Cmp(big.NewInt(4)) != 0 && // result 
+		rh != "04" && // result (hex)
+		s != "04" && // successor
+		d.Cmp(big.NewInt(4)) != 0 { // distance
+
+		t.Errorf("Finger k=%d failed (a=%s, b=%s, c=%s, r=%s, rh=%s, s=%s, d=%s)",k,a.String(),b.String(),c.String(),r.String(),rh,s,d.String())
+	} 
+
 }
 
 /*
@@ -354,4 +454,66 @@ func TestFinger160bits(t *testing.T) {
 	fmt.Println("")
 	node3.testCalcFingers(160, 160)
 	fmt.Println("")
+
+	/*
+	 * n            682874255151879437996522856919401519827635625586
+	 * k            0
+	 * m            160
+	 * 2^(k-1)      1
+	 * (n+2^(k-1))  682874255151879437996522856919401519827635625587
+	 * 2^m          1461501637330902918203684832716283019655932542976
+	 * finger       682874255151879437996522856919401519827635625587
+	 * finger (hex) 779d240121ed6d5e8bd0cb6529b08e5c617b5e73
+	 * successor    779d240121ed6d5e8bd0cb6529b08e5c617b5e72
+	 * distance     0
+	*/
+
+	/*
+	 * n            682874255151879437996522856919401519827635625586
+	 * k            1
+	 * m            160
+	 * 2^(k-1)      1
+	 * (n+2^(k-1))  682874255151879437996522856919401519827635625587
+	 * 2^m          1461501637330902918203684832716283019655932542976
+	 * finger       682874255151879437996522856919401519827635625587
+	 * finger (hex) 779d240121ed6d5e8bd0cb6529b08e5c617b5e73
+	 * successor    779d240121ed6d5e8bd0cb6529b08e5c617b5e72
+	 * distance     0
+	*/
+	/*
+	 * n            682874255151879437996522856919401519827635625586
+	 * k            80
+	 * m            160
+	 * 2^(k-1)      604462909807314587353088
+	 * (n+2^(k-1))  682874255151879437996523461382311327142222978674
+	 * 2^m          1461501637330902918203684832716283019655932542976
+	 * finger       682874255151879437996523461382311327142222978674
+	 * finger (hex) 779d240121ed6d5e8bd14b6529b08e5c617b5e72
+	 * successor    779d240121ed6d5e8bd0cb6529b08e5c617b5e72
+	 * distance     0
+	*/
+	/*
+	 * n            682874255151879437996522856919401519827635625586
+	 * k            120
+	 * m            90
+	 * 2^(k-1)      664613997892457936451903530140172288
+	 * (n+2^(k-1))  682874255152544051994415314855853423357775797874
+	 * 2^m          1237940039285380274899124224
+	 * finger       1180872106465109536036052594
+	 * finger (hex) 03d0cb6529b08e5c617b5e72
+	 * successor    f880fb198b7059ae92a69968727d84da9c94dd15
+	 * distance     877444087302148207702277795
+	*/
+	/*
+	 * n            682874255151879437996522856919401519827635625586
+	 * k            160
+	 * m            160
+	 * 2^(k-1)      730750818665451459101842416358141509827966271488
+	 * (n+2^(k-1))  1413625073817330897098365273277543029655601897074
+	 * 2^m          1461501637330902918203684832716283019655932542976
+	 * finger       1413625073817330897098365273277543029655601897074
+	 * finger (hex) f79d240121ed6d5e8bd0cb6529b08e5c617b5e72
+	 * successor    d0a43af3a433353909e09739b964e64c107e5e92
+	 * distance     508258282811496687056817668076520806659544776736
+	 */	
 }

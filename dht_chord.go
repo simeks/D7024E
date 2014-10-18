@@ -151,52 +151,61 @@ func (this *Node) printNode() {
  * successor    779d240121ed6d5e8bd0cb6529b08e5c617b5e72
  * distance     0
  */
-func (this *Node) testCalcFingers(k int, m int) {
-	fmt.Println("calulcating result = (n+2^(k-1)) mod (2^m)")
+func (this *Node) testCalcFingers(k int, m int) (a, b, c, f, d big.Int, fh, s string) {
+	//fmt.Println("calulcating result = (n+2^(k-1)) mod (2^m)")
 
 	// convert the n to a bigint
 	nBigInt := big.Int{}
 	nBigInt.SetBytes(this.nodeId)
 	//fmt.Printf("n            %s\n", nBigInt.String())
-	fmt.Printf("n            %s\n", hex.EncodeToString(this.nodeId))
+	//fmt.Printf("n            %s\n", hex.EncodeToString(this.nodeId))
 
-	fmt.Printf("k            %d\n", k)
+	//fmt.Printf("k            %d\n", k)
 
-	fmt.Printf("m            %d\n", m)
+	//fmt.Printf("m            %d\n", m)
 
 	// get the right addend, i.e. 2^(k-1)
 	two := big.NewInt(2)
 	addend := big.Int{}
 	addend.Exp(two, big.NewInt(int64(k-1)), nil)
 
-	fmt.Printf("2^(k-1)      %s\n", addend.String())
+	//fmt.Printf("2^(k-1)      %s\n", addend.String())
 
 	// calculate sum
 	sum := big.Int{}
 	sum.Add(&nBigInt, &addend)
 
-	fmt.Printf("(n+2^(k-1))  %s\n", sum.String())
+	//fmt.Printf("(n+2^(k-1))  %s\n", sum.String())
 
 	// calculate 2^m
 	ceil := big.Int{}
 	ceil.Exp(two, big.NewInt(int64(m)), nil)
 
-	fmt.Printf("2^m          %s\n", ceil.String())
+	//fmt.Printf("2^m          %s\n", ceil.String())
 
 	// apply the mod
 	result := big.Int{}
 	result.Mod(&sum, &ceil)
 
-	fmt.Printf("finger       %s\n", result.String())
+	//fmt.Printf("finger       %s\n", result.String())
 
 	resultBytes := result.Bytes()
-	resultHex := fmt.Sprintf("%x", resultBytes)
+	resultHex := hex.EncodeToString(resultBytes)
 
-	fmt.Printf("finger (hex) %s\n", resultHex)
+	//fmt.Printf("finger (hex) %s\n", resultHex)
 
-	fmt.Println("successor   ", hex.EncodeToString(this.findSuccessor(resultBytes).nodeId))
+	//fmt.Println("successor   ", hex.EncodeToString(this.findSuccessor(resultBytes).nodeId))
 
 	dist := distance(this.nodeId, resultBytes, num_bits)
 
-	fmt.Println("distance     " + dist.String())
+	//fmt.Println("distance     " + dist.String())
+
+	a = addend
+	b = sum
+	c = ceil
+	f = result
+	fh = resultHex
+	s = hex.EncodeToString(this.findSuccessor(resultBytes).nodeId)
+	d = *dist
+	return
 }
