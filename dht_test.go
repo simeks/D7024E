@@ -45,14 +45,14 @@ func TestRingSetup(t *testing.T) {
 	node8 := makeDHTNode(&id7, "localhost", "1118")
 	node9 := makeDHTNode(&id8, "localhost", "1119")
 
-	node1.addToRing(node2)
-	node1.addToRing(node3)
-	node1.addToRing(node4)
-	node4.addToRing(node5)
-	node3.addToRing(node6)
-	node3.addToRing(node7)
-	node3.addToRing(node8)
-	node7.addToRing(node9)
+	node2.addToRing(node1)
+	node3.addToRing(node1)
+	node4.addToRing(node1)
+	node5.addToRing(node1)
+	node6.addToRing(node1)
+	node7.addToRing(node1)
+	node8.addToRing(node1)
+	node9.addToRing(node1)
 
 
 	for i := 0; i < 10; i++ {
