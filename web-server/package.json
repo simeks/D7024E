@@ -1,0 +1,10 @@
+{
+	"name": "d7024e",
+	"main": "app.js",
+	"dependencies": {
+		"express": "~4.0.0",
+		"request": "latest",
+		"body-parser": "~1.0.1",
+		"jade": "latest"
+	}
+}
