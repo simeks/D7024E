@@ -88,7 +88,10 @@ function stopContainer(id) {
 	request.post({
 		url: "unix:///var/run/docker.sock/containers/"+id+"/stop"
 	}, function(err, res, body){
-		console.log(body)
+		if (!err) {
+			console.log(body)
+			deleteContainer(body.Id, createPort);
+		}
 	});
 }
 
@@ -131,11 +134,6 @@ app.post('/create', function(req, res) {
 app.post('/stop', function(req, res) {
 	var id = req.body.stopId;
 	stopContainer(id);
-});
-
-app.post('/delete', function(req, res) {
-	var id = req.body.deleteId;
-	deleteContainer(id);
 });
 
 app.use('/', router);
