@@ -20,7 +20,7 @@ var containers = [];
 
 function getContainers() {
 	request({
-		url: "unix:///var/run/docker.sock/containers/json",
+		url: "http://unix:/var/run/docker.sock:/containers/json",
 		json: true
 		}, function (err, res, body) {
 		if (!err && res.statusCode == 200) {
@@ -52,7 +52,7 @@ function createContainer(createPort, joinPort) {
 	
 	request.post({
 		headers: { 'content-type': 'application/json' },
-		url: "unix:///var/run/docker.sock/containers/create",
+		url: "http://unix:/var/run/docker.sock:/containers/create",
 		json: json
 	}, function(err, res, body){
 		if (!err) {
@@ -77,7 +77,7 @@ function startContainer(id, port) {
 	};
 	request.post({
 		headers: { 'content-type': 'application/json' },
-		url: "unix:///var/run/docker.sock/containers/"+id+"/start",
+		url: "http://unix:/var/run/docker.sock:/containers/"+id+"/start",
 		json: json
 	}, function(error, res, body){
 		console.log(body)
@@ -86,7 +86,7 @@ function startContainer(id, port) {
 
 function stopContainer(id) {
 	request.post({
-		url: "unix:///var/run/docker.sock/containers/"+id+"/stop"
+		url: "http://unix:/var/run/docker.sock:/containers/"+id+"/stop"
 	}, function(err, res, body){
 		if (!err) {
 			console.log(body)
@@ -98,7 +98,7 @@ function stopContainer(id) {
 function deleteContainer(id) {
 	request({
 		method: 'DELETE',
-		url: "unix:///var/run/docker.sock/containers/"+id
+		url: "http://unix:/var/run/docker.sock:/containers/"+id
 	}, function(err, res, body){
 		console.log(body)
 	});

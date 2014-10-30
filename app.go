@@ -302,6 +302,9 @@ func (this *App) listen() {
 			case "deleteKey":
 				go this.net.deleteKey(req)
 				break
+			case "keyValueExists":
+				go this.net.keyValueExists(req)
+				break
 			case "updateKey":
 				go this.net.updateKey(req)
 				break

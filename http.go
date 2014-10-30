@@ -68,7 +68,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 			app.keyValue[hashkey] = value
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key/value pair inserted successfully!</p>"+
-				"<p>Your decryption key is: "+secret+".")
+				"<p>Your encryption key is: "+secret+".")
 		}
 
 	} else {
@@ -77,7 +77,27 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 		req.Value = value
 
 		bytes, _ := json.Marshal(req)
-		app.transport.sendMsg(responsibleNode.addr, "insertKey", bytes)
+
+		r := app.transport.sendRequest(responsibleNode.addr, "keyValueExists", bytes)
+
+		if r == nil {
+			fmt.Println("Call error (keyValueExists)")
+			return
+		}
+
+		if r != nil {
+			reply := KeyValueExistsReply{}
+			json.Unmarshal(r.Data, &reply)
+
+			if reply.Exists { // key exists, dont insert it
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>not ins</p>")
+			} else {
+				app.transport.sendMsg(responsibleNode.addr, "insertKey", bytes)
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>ins</p>")
+			}
+		}
 	}
 }
 

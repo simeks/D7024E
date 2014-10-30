@@ -27,6 +27,11 @@ type ValueMsg struct {
 type DeleteValueReply struct {
 	Deleted bool
 }
+
+type KeyValueExistsReply struct {
+	Exists bool
+}
+
 type UpdateValueReply struct {
 	Updated bool
 }
@@ -108,6 +113,23 @@ func (n *Net) deleteKey(rc *RequestContext) {
 		reply.Deleted = true
 	} else {
 		reply.Deleted = false
+	}
+
+	bytes, _ := json.Marshal(reply)
+	rc.replyChan <- bytes
+}
+
+func (n *Net) keyValueExists(rc *RequestContext) {
+	r := KeyValueMsg{}
+	json.Unmarshal(rc.req.Data, &r)
+
+	reply := KeyValueExistsReply{}
+
+	_, ok := n.app.keyValue[r.Key]
+	if ok {
+		reply.Exists = true
+	} else {
+		reply.Exists = false
 	}
 
 	bytes, _ := json.Marshal(reply)
