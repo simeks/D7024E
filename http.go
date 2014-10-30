@@ -14,14 +14,14 @@ func chordHandler(w http.ResponseWriter, r *http.Request) {
 		"<textarea name=\"insertvalue\"></textarea><br>"+
 		"Key:"+
 		"<textarea name=\"insertkey\"></textarea><br>"+
-		"Encryption key:"+
-		"<textarea name=\"insertencryptionkey\"></textarea><br>"+
 		"<input type=\"submit\" value=\"Submit\">"+
 		"</form>"+
 		"<h1>Delete a key/value pair</h1>"+
 		"<form action=\"/delete/\" method=\"POST\">"+
 		"Key:"+
 		"<textarea name=\"deletekey\"></textarea><br>"+
+		"Ecryption key:"+
+		"<textarea name=\"deleteencryptionkey\"></textarea><br>"+
 		"<input type=\"submit\" value=\"Submit\">"+
 		"</form>"+
 		"<h1>Update value for key</h1>"+
@@ -38,8 +38,8 @@ func chordHandler(w http.ResponseWriter, r *http.Request) {
 		"<form action=\"/get/\" method=\"POST\">"+
 		"Key:"+
 		"<textarea name=\"getkey\"></textarea><br>"+
-		"Decryption key:"+
-		"<textarea name=\"getdecryptionkey\"></textarea><br>"+
+		"Ecryption key:"+
+		"<textarea name=\"getencryptionkey\"></textarea><br>"+
 		"<input type=\"submit\" value=\"Submit\">"+
 		"</form>")
 }
@@ -47,18 +47,29 @@ func chordHandler(w http.ResponseWriter, r *http.Request) {
 func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	value := r.FormValue("insertvalue")
 	key := r.FormValue("insertkey")
-	//encryptionkey := r.FormValue("insertencryptionkey")
 	hashkey := sha1hash(key)
 
-	// kör AES så value blir krypterat
-	// ...
+	// Encrypt the value
+	secret, _ := GenerateAesSecret()
+	value = EncryptAes(secret, value)
 
 	responsibleNode := app.lookup(hashkey)
 
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
 		app.node.mutex.Lock()
 		defer app.node.mutex.Unlock()
-		app.keyValue[hashkey] = value
+
+		_, ok := app.keyValue[hashkey]
+
+		if ok { // if the key already exist
+			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+				"<p>That key is already taken. Please choose a new key.</p>")
+		} else { // insert the new key/value-pair
+			app.keyValue[hashkey] = value
+			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+				"<p>Key/value pair inserted successfully!</p>"+
+				"<p>Your decryption key is: "+secret+".")
+		}
 
 	} else {
 		req := KeyValueMsg{}
@@ -68,9 +79,6 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 		bytes, _ := json.Marshal(req)
 		app.transport.sendMsg(responsibleNode.addr, "insertKey", bytes)
 	}
-	fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-		"<p>Key/value pair inserted successfully!</p>")
-
 }
 
 func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {

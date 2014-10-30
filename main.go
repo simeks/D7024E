@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 
 	app.init(localAddr)
 	go app.listen()
-
+	time.Sleep(1 * time.Second)
 	if remote != "" { // Join existing ring
 		go app.join(remote)
 	}
