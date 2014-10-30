@@ -89,8 +89,7 @@ function stopContainer(id) {
 		url: "http://unix:/var/run/docker.sock:/containers/"+id+"/stop"
 	}, function(err, res, body){
 		if (!err) {
-			console.log(body)
-			deleteContainer(body.Id, createPort);
+			deleteContainer(id);
 		}
 	});
 }
@@ -100,7 +99,6 @@ function deleteContainer(id) {
 		method: 'DELETE',
 		url: "http://unix:/var/run/docker.sock:/containers/"+id
 	}, function(err, res, body){
-		console.log(body)
 	});
 }
 
