@@ -15,9 +15,14 @@ type KeyValueMsg struct {
 	Key, Value string
 }
 
-// getKey, deleteKey
+// getKey
 type KeyMsg struct {
 	Key string
+}
+
+type DeleteKeyMsg struct {
+	Key           string
+	EncryptionKey string
 }
 
 type ValueMsg struct {
@@ -25,7 +30,8 @@ type ValueMsg struct {
 }
 
 type DeleteValueReply struct {
-	Deleted bool
+	Deleted          bool
+	DecryptionFailed bool
 }
 
 type KeyValueExistsReply struct {
@@ -82,7 +88,9 @@ func (n *Net) insertKey(msg *Msg) {
 	m := KeyValueMsg{}
 	json.Unmarshal(msg.Data, &m)
 
+	n.app.node.mutex.Lock()
 	n.app.keyValue[m.Key] = m.Value
+	n.app.node.mutex.Unlock()
 
 }
 
@@ -102,17 +110,28 @@ func (n *Net) getKey(rc *RequestContext) {
 }
 
 func (n *Net) deleteKey(rc *RequestContext) {
-	r := KeyMsg{}
+	r := DeleteKeyMsg{}
 	json.Unmarshal(rc.req.Data, &r)
 
 	reply := DeleteValueReply{}
 
 	_, ok := n.app.keyValue[r.Key]
 	if ok {
-		delete(n.app.keyValue, r.Key)
-		reply.Deleted = true
+		_, err := DecryptAes(r.EncryptionKey, n.app.keyValue[r.Key])
+
+		if err != nil {
+			reply.Deleted = false
+			reply.DecryptionFailed = true
+		} else {
+			n.app.node.mutex.Lock()
+			delete(n.app.keyValue, r.Key)
+			n.app.node.mutex.Unlock()
+			reply.Deleted = true
+			reply.DecryptionFailed = false
+		}
 	} else {
 		reply.Deleted = false
+		reply.DecryptionFailed = false
 	}
 
 	bytes, _ := json.Marshal(reply)

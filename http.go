@@ -91,11 +91,12 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 			if reply.Exists { // key exists, dont insert it
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>not ins</p>")
+					"<p>That key is already taken. Please choose a new key.</p>")
 			} else {
 				app.transport.sendMsg(responsibleNode.addr, "insertKey", bytes)
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>ins</p>")
+					"<p>Key/value pair inserted successfully!</p>"+
+					"<p>Your encryption key is: "+secret+".")
 			}
 		}
 	}
@@ -103,6 +104,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	key := r.FormValue("deletekey")
+	encryptionKey := r.FormValue("deleteencryptionkey")
 	hashkey := sha1hash(key)
 
 	responsibleNode := app.lookup(hashkey)
@@ -113,16 +115,24 @@ func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 			app.node.mutex.Lock()
 			defer app.node.mutex.Unlock()
 
-			delete(app.keyValue, hashkey)
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Key deleted successfully!</p>")
+			_, err := DecryptAes(encryptionKey, app.keyValue[hashkey])
+
+			if err != nil {
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>Key/value-pair was NOT deleted. Wrong encryption key.</p>")
+			} else {
+				delete(app.keyValue, hashkey)
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>Key/value-pair deleted successfully!</p>")
+			}
 		} else {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key was not found.</p>")
 		}
 	} else {
-		req := KeyMsg{}
+		req := DeleteKeyMsg{}
 		req.Key = hashkey
+		req.EncryptionKey = encryptionKey
 
 		bytes, _ := json.Marshal(req)
 		r := app.transport.sendRequest(responsibleNode.addr, "deleteKey", bytes)
@@ -138,7 +148,10 @@ func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 			if reply.Deleted {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Key deleted successfully!</p>")
+					"<p>Key/value-pair deleted successfully!</p>")
+			} else if reply.DecryptionFailed {
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>The key/value-pair was NOT deleted. Wrong encryption key.</p>")
 			} else {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 					"<p>Key was not found.</p>")
