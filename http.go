@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,8 +21,6 @@ func chordHandler(w http.ResponseWriter, r *http.Request) {
 		"<form action=\"/delete/\" method=\"POST\">"+
 		"Key:"+
 		"<textarea name=\"deletekey\"></textarea><br>"+
-		"Ecryption key:"+
-		"<textarea name=\"deleteencryptionkey\"></textarea><br>"+
 		"<input type=\"submit\" value=\"Submit\">"+
 		"</form>"+
 		"<h1>Update value for key</h1>"+
@@ -30,8 +29,6 @@ func chordHandler(w http.ResponseWriter, r *http.Request) {
 		"<textarea name=\"updatevalue\"></textarea><br>"+
 		"Key:"+
 		"<textarea name=\"updatekey\"></textarea><br>"+
-		"Encryption key:"+
-		"<textarea name=\"updateencryptionkey\"></textarea><br>"+
 		"<input type=\"submit\" value=\"Submit\">"+
 		"</form>"+
 		"<h1>Get the value for key</h1>"+
@@ -68,7 +65,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 			app.keyValue[hashkey] = value
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key/value pair inserted successfully!</p>"+
-				"<p>Your encryption key is: "+secret+".")
+				"<p>Your encryption key is: "+secret+"</p>")
 		}
 
 	} else {
@@ -104,7 +101,6 @@ func postHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	key := r.FormValue("deletekey")
-	encryptionKey := r.FormValue("deleteencryptionkey")
 	hashkey := sha1hash(key)
 
 	responsibleNode := app.lookup(hashkey)
@@ -115,24 +111,16 @@ func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 			app.node.mutex.Lock()
 			defer app.node.mutex.Unlock()
 
-			_, err := DecryptAes(encryptionKey, app.keyValue[hashkey])
-
-			if err != nil {
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Key/value-pair was NOT deleted. Wrong encryption key.</p>")
-			} else {
-				delete(app.keyValue, hashkey)
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Key/value-pair deleted successfully!</p>")
-			}
+			delete(app.keyValue, hashkey)
+			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+				"<p>Key deleted successfully!</p>")
 		} else {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key was not found.</p>")
 		}
 	} else {
-		req := DeleteKeyMsg{}
+		req := KeyMsg{}
 		req.Key = hashkey
-		req.EncryptionKey = encryptionKey
 
 		bytes, _ := json.Marshal(req)
 		r := app.transport.sendRequest(responsibleNode.addr, "deleteKey", bytes)
@@ -148,10 +136,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 			if reply.Deleted {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Key/value-pair deleted successfully!</p>")
-			} else if reply.DecryptionFailed {
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>The key/value-pair was NOT deleted. Wrong encryption key.</p>")
+					"<p>Key deleted successfully!</p>")
 			} else {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 					"<p>Key was not found.</p>")
@@ -162,7 +147,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	key := r.FormValue("getkey")
-	//decryptionkey := r.FormValue("getdecryptionkey")
+	encryptionKey := r.FormValue("getencryptionkey")
 	hashkey := sha1hash(key)
 
 	responsibleNode := app.lookup(hashkey)
@@ -170,10 +155,23 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
 		_, ok := app.keyValue[hashkey]
 		if ok {
-			// decrypta app.keyValue[hashkey]
-			// ...
-			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Value: "+app.keyValue[hashkey]+"</p>")
+			_, er := hex.DecodeString(encryptionKey)
+
+			if er != nil {
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>Wrong encryption key.test1</p>")
+			} else {
+				value, err := DecryptAes(encryptionKey, app.keyValue[hashkey])
+
+				if err != nil {
+					fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+						"<p>Value: "+value+"</p>")
+				} else {
+					fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+						"<p>Wrong encryption keytest2.</p>")
+				}
+			}
+
 		} else {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key was not found.</p>")
@@ -195,33 +193,44 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 			json.Unmarshal(r.Data, &reply)
 
 			if reply.Value != "" {
-				// decrypta reply.Value
-				// ...
-				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Value: "+reply.Value+"</p>")
-				return
+				_, er := hex.DecodeString(encryptionKey)
+
+				if er != nil {
+					fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+						"<p>Wrong encryption key.test6</p>")
+				} else {
+					value, err := DecryptAes(encryptionKey, app.keyValue[hashkey])
+
+					if err != nil {
+						fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+							"<p>Value: "+value+"</p>")
+					} else {
+						fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+							"<p>Wrong encryption key.test5</p>")
+					}
+				}
 			}
 		}
-		fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-			"<p>Key was not found.</p>")
-
 	}
 }
 
 func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	value := r.FormValue("updatevalue")
 	key := r.FormValue("updatekey")
-	//encryptionkey := r.FormValue("updateencryptionkey")
 	hashkey := sha1hash(key)
 
 	responsibleNode := app.lookup(hashkey)
+
+	secret, _ := GenerateAesSecret()
+	value = EncryptAes(secret, value)
 
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
 		_, ok := app.keyValue[hashkey]
 		if ok {
 			app.keyValue[hashkey] = value
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-				"<p>Value updated successfully!</p>")
+				"<p>Value updated successfully!</p>"+
+				"<p>Your new encryption key is: "+secret+".")
 		} else {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key was not found.</p>")
