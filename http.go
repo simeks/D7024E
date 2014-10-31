@@ -181,13 +181,13 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key was not found.</p>")
 		}
+
+		// remote node is responsible for the keyvalue-pair
 	} else {
 		req := KeyMsg{}
 		req.Key = hashkey
-
 		bytes, _ := json.Marshal(req)
 		r := app.transport.sendRequest(responsibleNode.addr, "getKey", bytes)
-
 		if r == nil {
 			fmt.Println("Call error (getKey)")
 			return
@@ -204,7 +204,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 					fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 						"<p>Wrong encryption key.</p>")
 				} else {
-					value, err := DecryptAes(encryptionKey, app.keyValue[hashkey])
+					value, err := DecryptAes(encryptionKey, reply.Value)
 
 					if err != nil {
 						fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
@@ -214,6 +214,9 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 							"<p>Value: "+value+"</p>")
 					}
 				}
+			} else {
+				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
+					"<p>Key was not found.</p>")
 			}
 		}
 	}

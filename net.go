@@ -97,6 +97,8 @@ func (n *Net) getKey(rc *RequestContext) {
 	val, ok := n.app.keyValue[r.Key]
 	if ok {
 		reply.Value = val
+	} else {
+		reply.Value = ""
 	}
 
 	bytes, _ := json.Marshal(reply)
