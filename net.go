@@ -82,7 +82,9 @@ func (n *Net) insertKey(msg *Msg) {
 	m := KeyValueMsg{}
 	json.Unmarshal(msg.Data, &m)
 
+	n.app.node.mutex.Lock()
 	n.app.keyValue[m.Key] = m.Value
+	n.app.node.mutex.Unlock()
 
 }
 
@@ -144,10 +146,9 @@ func (n *Net) updateKey(rc *RequestContext) {
 
 	_, ok := n.app.keyValue[r.Key]
 	if ok {
-		secret, _ := GenerateAesSecret()
-		value := EncryptAes(secret, r.Value)
-
-		n.app.keyValue[r.Key] = value
+		n.app.node.mutex.Lock()
+		n.app.keyValue[r.Key] = r.Value
+		n.app.node.mutex.Unlock()
 		reply.Updated = true
 	} else {
 		reply.Updated = false

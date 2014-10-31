@@ -154,24 +154,29 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
 		_, ok := app.keyValue[hashkey]
+
+		// key exists
 		if ok {
 			_, er := hex.DecodeString(encryptionKey)
 
+			// wrong format of the encryption key
 			if er != nil {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Wrong encryption key.test1</p>")
+					"<p>Wrong encryption key.</p>")
 			} else {
 				value, err := DecryptAes(encryptionKey, app.keyValue[hashkey])
 
+				// if DecryptAes failed
 				if err != nil {
 					fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-						"<p>Value: "+value+"</p>")
+						"<p>Wrong encryption key.</p>")
 				} else {
 					fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-						"<p>Wrong encryption keytest2.</p>")
+						"<p>Value: "+value+"</p>")
 				}
 			}
 
+			// key does not exist
 		} else {
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Key was not found.</p>")
@@ -197,16 +202,16 @@ func getHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 				if er != nil {
 					fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-						"<p>Wrong encryption key.test6</p>")
+						"<p>Wrong encryption key.</p>")
 				} else {
 					value, err := DecryptAes(encryptionKey, app.keyValue[hashkey])
 
 					if err != nil {
 						fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-							"<p>Value: "+value+"</p>")
+							"<p>Wrong encryption key.</p>")
 					} else {
 						fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-							"<p>Wrong encryption key.test5</p>")
+							"<p>Value: "+value+"</p>")
 					}
 				}
 			}
@@ -227,7 +232,9 @@ func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
 	if bytes.Compare(app.node.nodeId, responsibleNode.nodeId) == 0 {
 		_, ok := app.keyValue[hashkey]
 		if ok {
+			app.node.mutex.Lock()
 			app.keyValue[hashkey] = value
+			app.node.mutex.Unlock()
 			fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 				"<p>Value updated successfully!</p>"+
 				"<p>Your new encryption key is: "+secret+".")
@@ -254,7 +261,8 @@ func putHandler(w http.ResponseWriter, r *http.Request, app *App) {
 
 			if reply.Updated {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
-					"<p>Value updated successfully!</p>")
+					"<p>Value updated successfully!</p>"+
+					"<p>Your new encryption key is: "+secret+".")
 			} else {
 				fmt.Fprintf(w, "<p><a href=\"/chord/\">go back</a></p>"+
 					"<p>Key was not found.</p>")
